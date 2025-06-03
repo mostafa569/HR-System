@@ -33,20 +33,21 @@ class EmployerController extends Controller
    
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'full_name' => 'required|string|max:100',
-            'gender' => ['nullable', Rule::in(['male', 'female', 'other'])],
-            'nationality' => 'nullable|string|max:50',
-            'dob' => 'required|date',
-            'national_id' => 'required|string|max:20|unique:employers,national_id',
-            'address' => 'nullable|string',
-            'phone' => 'nullable|string|max:20',
-            'department_id' => 'nullable|exists:departments,id',
-            'contract_date' => 'nullable|date',
-            'salary' => 'nullable|numeric',
-            'attendance_time' => 'nullable|date_format:H:i',
-            'leave_time' => 'nullable|date_format:H:i',
-        ]);
+       $validated = $request->validate([
+    'full_name' => 'required|string|max:100',
+    'gender' => ['required', Rule::in(['male', 'female', 'other'])],
+    'nationality' => 'required|string|max:50',
+    'dob' => 'required|date',
+    'national_id' => ['required', 'string', 'size:14', 'regex:/^(2|3)\d{13}$/', 'unique:employers,national_id'],
+    'address' => 'required|string',
+    'phone' => 'required|string|max:20',
+    'department_id' => 'required|exists:departments,id',
+    'contract_date' => 'required|date',
+    'salary' => 'required|numeric',
+    'attendance_time' => 'required|date_format:H:i',
+    'leave_time' => 'required|date_format:H:i',
+]);
+
 
         $employer = Employer::create($validated);
 
@@ -72,6 +73,7 @@ class EmployerController extends Controller
                 'required',
                 'string',
                 'max:20',
+                'regex:/^(2|3)\d{13}$/',
                 Rule::unique('employers')->ignore($employer->id),
             ],
             'address' => 'nullable|string',
