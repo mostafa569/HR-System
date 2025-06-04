@@ -13,7 +13,7 @@ class HrController extends Controller
      */
     public function index()
     {
-        return Hr::select('id', 'full_name', 'username', 'email', 'created_at')->get();
+        return Hr::select('id', 'full_name', 'username', 'email','role', 'created_at')->get();
     }
 
     /**
@@ -21,11 +21,15 @@ class HrController extends Controller
      */
     public function store(Request $request)
     {
+        if (auth()->user()->role !== 'super admin') {
+           return response()->json(['error' => 'Unauthorized. Only super admins can add HRs'], 403);
+        }
              $validated = $request->validate([
             'full_name' => 'required|string',
             'username' => 'required|string|unique:hr_users,username',
             'email' => 'required|email|unique:hr_users,email',
             'password' => 'required|min:6',
+            'role' => 'required|in:super admin,hr'
         ]);
 
         $validated['password'] = Hash::make($validated['password']);
@@ -40,48 +44,63 @@ class HrController extends Controller
      */
     public function show($id)
     {
-        $hr = Hr::select('id', 'full_name', 'username', 'email')->findOrFail($id);
+        $hr = Hr::select('id', 'full_name', 'username', 'email','role')->findOrFail($id);
         return response()->json($hr);
     }
 
     /**
      * Update the specified resource in storage.
      */
+
     public function update(Request $request, $id)
     {
-        $hr = Hr::findOrFail($id);
-        if ($hr->id == 1 && auth()->id() != 1) {
-        return response()->json(['error' => 'You cannot modify superadmin data'], 403);
+        $authUser = auth()->user(); 
+        $targetUser = Hr::findOrFail($id); 
+
+        if ($authUser->role !== 'super admin') {
+            return response()->json(['error' => 'Unauthorized. Super admin only.'], 403);
         }
 
+        if ($targetUser->role === 'super admin' && $authUser->id !== $targetUser->id) {
+            return response()->json(['error' => 'You cannot modify another super admin.'], 403);
+        }
 
         $validated = $request->validate([
             'full_name' => 'sometimes|string',
             'username' => 'sometimes|string|unique:hr_users,username,' . $id,
             'email' => 'sometimes|email|unique:hr_users,email,' . $id,
             'password' => 'sometimes|min:6',
+            'role' => 'sometimes|in:super admin,hr',
         ]);
 
         if (isset($validated['password'])) {
             $validated['password'] = Hash::make($validated['password']);
         }
 
-        $hr->update($validated);
+        $targetUser->update($validated);
 
-        return response()->json(['message' => 'HR updated', 'data' => $hr]);
+        return response()->json(['message' => 'HR updated', 'data' => $targetUser]);
     }
+
 
     /**
      * Remove the specified resource from storage.
      */
     public function destroy($id)
     {
-        $hr = Hr::findOrFail($id);
-        if ($id == 1) {
-        return response()->json(['message' => 'Cannot delete main admin'], 403);
+        $authUser = auth()->user(); 
+        $targetUser = Hr::findOrFail($id); 
+        if ($authUser->role !== 'super admin') {
+            return response()->json(['error' => 'Unauthorized. Super admin only.'], 403);
         }
-        $hr->delete();
+
+        if ($targetUser->role === 'super admin') {
+            return response()->json(['error' => 'Cannot delete super admin.'], 403);
+        }
+
+        $targetUser->delete();
 
         return response()->json(['message' => 'HR deleted']);
     }
+
 }
