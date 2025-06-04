@@ -11,11 +11,63 @@ use Illuminate\Validation\Rule;
 class EmployerController extends Controller
 {
     
-    public function index(Request $request)
+      public function index(Request $request)
     {
-      
-        $employers = Employer::with('department')->paginate(10);
-        return response()->json($employers);
+         
+        $query = Employer::with('department');
+
+         
+        if ($request->has('search') && !empty($request->input('search'))) {
+            $search = $request->input('search');
+            $searchFields = explode(',', $request->input('search_fields', 'full_name,national_id,phone'));
+
+            $query->where(function ($q) use ($search, $searchFields) {
+                if (in_array('full_name', $searchFields)) {
+                    $q->orWhere('full_name', 'like', "%{$search}%");
+                }
+                if (in_array('national_id', $searchFields)) {
+                    $q->orWhere('national_id', 'like', "%{$search}%");
+                }
+                if (in_array('phone', $searchFields)) {
+                    $q->orWhere('phone', 'like', "%{$search}%");
+                }
+            });
+        }
+
+        
+        if ($request->has('department_name') && !empty($request->input('department_name'))) {
+            $query->whereHas('department', function ($q) use ($request) {
+                $q->where('name', $request->input('department_name'));
+            });
+        }
+
+         
+        $sortBy = $request->input('sort_by', 'full_name');
+        $sortDirection = $request->input('sort_direction', 'asc');
+
+        
+        $validSortFields = ['full_name', 'national_id', 'phone', 'salary', 'department'];
+        if (in_array($sortBy, $validSortFields)) {
+            if ($sortBy === 'department') {
+                $query->join('departments', 'employers.department_id', '=', 'departments.id')
+                      ->orderBy('departments.name', $sortDirection)
+                      ->select('employers.*');  
+            } else {
+                $query->orderBy($sortBy, $sortDirection);
+            }
+        }
+
+         
+        $perPage = 10;
+        $employers = $query->paginate($perPage);
+
+         
+        return response()->json([
+            'data' => $employers->items(),
+            'total' => $employers->total(),
+            'current_page' => $employers->currentPage(),
+            'last_page' => $employers->lastPage(),
+        ]);
     }
 
     
