@@ -34,6 +34,18 @@ class HolidayController extends Controller
             ],
         ]);
 
+        // Check for duplicate holiday on the same date
+        $existingHoliday = DB::table('holidays')
+            ->whereDate('date', $validated['date'])
+            ->first();
+
+        if ($existingHoliday) {
+            return response()->json([
+                'message' => 'A holiday already exists on this date',
+                'existing_holiday' => $existingHoliday
+            ], 422);
+        }
+
         // Ensure name is null for weekly holidays if empty
         if ($validated['type'] === 'weekly' && empty($validated['name'])) {
             $validated['name'] = null;

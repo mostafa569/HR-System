@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const HolidayEditForm = ({ holiday, onClose, onUpdated, holidays = [] }) => {
   const defaultHoliday = {
@@ -52,7 +54,7 @@ const HolidayEditForm = ({ holiday, onClose, onUpdated, holidays = [] }) => {
       setAllHolidays(data);
     } catch (error) {
       console.error("Error fetching holidays:", error);
-      setError("Failed to load holidays");
+      toast.error("Failed to load holidays");
     }
   };
 
@@ -122,15 +124,16 @@ const HolidayEditForm = ({ holiday, onClose, onUpdated, holidays = [] }) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
+    setIsSubmitting(true);
 
     try {
       const token = localStorage.getItem("userToken");
-      const url = form.id
-        ? `http://127.0.0.1:8000/api/holidays/${form.id}`
-        : "http://127.0.0.1:8000/api/holidays";
+      const url = isCreateMode
+        ? "http://127.0.0.1:8000/api/holidays"
+        : `http://127.0.0.1:8000/api/holidays/${form.id}`;
 
       const response = await fetch(url, {
-        method: form.id ? "PUT" : "POST",
+        method: isCreateMode ? "POST" : "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -139,24 +142,28 @@ const HolidayEditForm = ({ holiday, onClose, onUpdated, holidays = [] }) => {
         body: JSON.stringify(form),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to save holiday");
+        if (response.status === 422) {
+          toast.error(data.message || "A holiday already exists on this date");
+        } else {
+          throw new Error(data.message || "Failed to save holiday");
+        }
+        return;
       }
 
-      setSuccess(
-        form.id
-          ? "Holiday updated successfully"
-          : "Holiday created successfully"
+      toast.success(
+        isCreateMode
+          ? "Holiday created successfully"
+          : "Holiday updated successfully"
       );
-      setForm(defaultHoliday);
-      setIsCreateMode(true);
-      fetchHolidays();
-      if (onUpdated) onUpdated();
-      handleClose();
+      onUpdated();
     } catch (error) {
       console.error("Error saving holiday:", error);
-      setError(error.message || "Failed to save holiday");
+      toast.error(error.message || "Failed to save holiday");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -444,7 +451,7 @@ const HolidayEditForm = ({ holiday, onClose, onUpdated, holidays = [] }) => {
           max-height: 87vh;
           display: flex;
           justify-content: center;
-          margin-top:100px
+          margin-top: 100px;
         }
 
         .holiday-edit-modal-content {
