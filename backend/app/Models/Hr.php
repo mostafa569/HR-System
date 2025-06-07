@@ -16,7 +16,12 @@ class Hr extends Authenticatable
                             'full_name',
                             'username',
                             'email',
+<<<<<<< HEAD
                             'password'
+=======
+                            'password', 
+                            'role',
+>>>>>>> e628ae3db834d3289fbcfd55c9a0638c7a978399
                         ];
 
     protected $hidden = ['password'];

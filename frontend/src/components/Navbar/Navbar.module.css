@@ -1,0 +1,18 @@
+.brand {
+  color: #0a7dd9;
+  font-family: Georgia, 'Times New Roman', Times, serif;
+  font-size: 24px;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.brand:hover {
+  color: #0867b0;
+}
+
+.dark-mode .brand {
+  color: #fff;
+}
+.cont {
+  height: 100px !important;
+}

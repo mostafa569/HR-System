@@ -51,6 +51,7 @@ class DepartmentController extends Controller
     }
 
     /** Remove the specified department. */
+<<<<<<< HEAD
     public function destroy(Department $department)
     {
         if ($department->employers()->count() > 0) {
@@ -60,4 +61,20 @@ class DepartmentController extends Controller
         $department->delete();
         return response()->json(['message' => 'Department deleted successfully.']);
     }
+=======
+   public function destroy($id)
+{
+    $department = Department::find($id);
+
+    if (!$department) {
+        return response()->json(['message' => 'Department not found.'], 404);
+    }
+
+
+    $department->delete();
+
+    return response()->json(['message' => 'Department deleted successfully.']);
+}
+
+>>>>>>> e628ae3db834d3289fbcfd55c9a0638c7a978399
 }

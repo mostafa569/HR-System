@@ -11,11 +11,71 @@ use Illuminate\Validation\Rule;
 class EmployerController extends Controller
 {
     
+<<<<<<< HEAD
     public function index(Request $request)
     {
       
         $employers = Employer::with('department')->paginate(10);
         return response()->json($employers);
+=======
+      public function index(Request $request)
+    {
+         
+        $query = Employer::with('department');
+
+         
+        if ($request->has('search') && !empty($request->input('search'))) {
+            $search = $request->input('search');
+            $searchFields = explode(',', $request->input('search_fields', 'full_name,national_id,phone'));
+
+            $query->where(function ($q) use ($search, $searchFields) {
+                if (in_array('full_name', $searchFields)) {
+                    $q->orWhere('full_name', 'like', "%{$search}%");
+                }
+                if (in_array('national_id', $searchFields)) {
+                    $q->orWhere('national_id', 'like', "%{$search}%");
+                }
+                if (in_array('phone', $searchFields)) {
+                    $q->orWhere('phone', 'like', "%{$search}%");
+                }
+            });
+        }
+
+        
+        if ($request->has('department_name') && !empty($request->input('department_name'))) {
+            $query->whereHas('department', function ($q) use ($request) {
+                $q->where('name', $request->input('department_name'));
+            });
+        }
+
+         
+        $sortBy = $request->input('sort_by', 'full_name');
+        $sortDirection = $request->input('sort_direction', 'asc');
+
+        
+        $validSortFields = ['full_name', 'national_id', 'phone', 'salary', 'department'];
+        if (in_array($sortBy, $validSortFields)) {
+            if ($sortBy === 'department') {
+                $query->join('departments', 'employers.department_id', '=', 'departments.id')
+                      ->orderBy('departments.name', $sortDirection)
+                      ->select('employers.*');  
+            } else {
+                $query->orderBy($sortBy, $sortDirection);
+            }
+        }
+
+         
+        $perPage = 10;
+        $employers = $query->paginate($perPage);
+
+         
+        return response()->json([
+            'data' => $employers->items(),
+            'total' => $employers->total(),
+            'current_page' => $employers->currentPage(),
+            'last_page' => $employers->lastPage(),
+        ]);
+>>>>>>> e628ae3db834d3289fbcfd55c9a0638c7a978399
     }
 
     
@@ -33,6 +93,7 @@ class EmployerController extends Controller
    
     public function store(Request $request)
     {
+<<<<<<< HEAD
         $validated = $request->validate([
             'full_name' => 'required|string|max:100',
             'gender' => ['nullable', Rule::in(['male', 'female', 'other'])],
@@ -47,6 +108,23 @@ class EmployerController extends Controller
             'attendance_time' => 'nullable|date_format:H:i',
             'leave_time' => 'nullable|date_format:H:i',
         ]);
+=======
+       $validated = $request->validate([
+    'full_name' => 'required|string|max:100',
+    'gender' => ['required', Rule::in(['male', 'female', 'other'])],
+    'nationality' => 'required|string|max:50',
+    'dob' => 'required|date',
+    'national_id' => ['required', 'string', 'size:14', 'regex:/^(2|3)\d{13}$/', 'unique:employers,national_id'],
+    'address' => 'required|string',
+    'phone' => 'required|string|max:20',
+    'department_id' => 'required|exists:departments,id',
+    'contract_date' => 'required|date',
+    'salary' => 'required|numeric',
+    'attendance_time' => 'required|date_format:H:i',
+    'leave_time' => 'required|date_format:H:i',
+]);
+
+>>>>>>> e628ae3db834d3289fbcfd55c9a0638c7a978399
 
         $employer = Employer::create($validated);
 
@@ -72,6 +150,10 @@ class EmployerController extends Controller
                 'required',
                 'string',
                 'max:20',
+<<<<<<< HEAD
+=======
+                'regex:/^(2|3)\d{13}$/',
+>>>>>>> e628ae3db834d3289fbcfd55c9a0638c7a978399
                 Rule::unique('employers')->ignore($employer->id),
             ],
             'address' => 'nullable|string',
