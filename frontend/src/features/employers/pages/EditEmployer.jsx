@@ -87,7 +87,7 @@ const EditEmployer = () => {
           national_id: employerResponse.national_id || "",
           address: employerResponse.address || "",
           phone: employerResponse.phone || "",
-          department_id: employerResponse.department?.id || "",
+          department_id: employerResponse.department?.id?.toString() || "",
           contract_date: employerResponse.contract_date || "",
           salary: employerResponse.salary || "",
           attendance_time:
@@ -95,9 +95,9 @@ const EditEmployer = () => {
           leave_time: formatTimeForInput(employerResponse.leave_time) || "",
         });
 
-        if (departmentsResponse && departmentsResponse.data) {
-          console.log("Setting departments:", departmentsResponse.data);
-          setDepartments(departmentsResponse.data);
+        if (departmentsResponse) {
+          console.log("Setting departments:", departmentsResponse);
+          setDepartments(departmentsResponse);
         }
 
         setLoading(false);
@@ -144,10 +144,20 @@ const EditEmployer = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     console.log("Field changed:", name, "New value:", value);
-    setFormData((prev) => ({
-      ...prev,
+
+    // تحديث حالة النموذج مباشرة
+    setFormData((prevData) => ({
+      ...prevData,
       [name]: value,
     }));
+
+    // مسح رسالة الخطأ إذا وجدت
+    if (errors[name]) {
+      setErrors((prevErrors) => ({
+        ...prevErrors,
+        [name]: null,
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -646,6 +656,7 @@ const EditEmployer = () => {
                         errors.full_name ? "is-invalid" : ""
                       }`}
                       id="full_name"
+                      name="full_name"
                       value={formData.full_name}
                       onChange={handleChange}
                       placeholder="John Doe"
@@ -673,6 +684,7 @@ const EditEmployer = () => {
                           errors.gender ? "is-invalid" : ""
                         }`}
                         id="gender"
+                        name="gender"
                         value={formData.gender}
                         onChange={handleChange}
                       >
@@ -704,6 +716,7 @@ const EditEmployer = () => {
                           errors.nationality ? "is-invalid" : ""
                         }`}
                         id="nationality"
+                        name="nationality"
                         value={formData.nationality}
                         onChange={handleChange}
                         placeholder="Nationality"
@@ -731,6 +744,7 @@ const EditEmployer = () => {
                         errors.dob ? "is-invalid" : ""
                       }`}
                       id="dob"
+                      name="dob"
                       value={formData.dob}
                       onChange={handleChange}
                     />
@@ -769,6 +783,7 @@ const EditEmployer = () => {
                         errors.national_id ? "is-invalid" : ""
                       }`}
                       id="national_id"
+                      name="national_id"
                       value={formData.national_id}
                       onChange={handleChange}
                       placeholder="2 or 3 followed by 13 digits"
@@ -798,6 +813,7 @@ const EditEmployer = () => {
                         errors.address ? "is-invalid" : ""
                       }`}
                       id="address"
+                      name="address"
                       value={formData.address}
                       onChange={handleChange}
                       placeholder="Full address"
@@ -825,6 +841,7 @@ const EditEmployer = () => {
                         errors.phone ? "is-invalid" : ""
                       }`}
                       id="phone"
+                      name="phone"
                       value={formData.phone}
                       onChange={handleChange}
                       placeholder="Phone number"
@@ -847,33 +864,41 @@ const EditEmployer = () => {
               aria-labelledby="employment-tab"
             >
               <form onSubmit={handleSubmit}>
-              <div className="mb-3">
-  <label htmlFor="department_id" className="form-label fw-bold text-dark">
-    Department
-  </label>
-  <div className="input-group">
-    <span className="input-group-text">
-      <FaBuilding />
-    </span>
-    <select
-      name="department_id"
-      className={`form-select ${errors.department_id ? "is-invalid" : ""}`}
-      id="department_id"
-      value={formData.department_id}
-      onChange={handleChange}
-    >
-      <option value="">Select Department</option>
-      {departments.map((dept) => (
-        <option key={dept.id} value={dept.id.toString()}> {/* Ensure string conversion if needed */}
-          {dept.name}
-        </option>
-      ))}
-    </select>
-    {errors.department_id && (
-      <div className="invalid-feedback">{errors.department_id}</div>
-    )}
-  </div>
-</div>
+                <div className="mb-3">
+                  <label
+                    htmlFor="department_id"
+                    className="form-label fw-bold text-dark"
+                  >
+                    Department
+                  </label>
+                  <div className="input-group">
+                    <span className="input-group-text">
+                      <FaBuilding />
+                    </span>
+                    <select
+                      name="department_id"
+                      className={`form-select ${
+                        errors.department_id ? "is-invalid" : ""
+                      }`}
+                      id="department_id"
+                      value={formData.department_id}
+                      onChange={handleChange}
+                    >
+                      <option value="">Select Department</option>
+                      {departments &&
+                        departments.map((dept) => (
+                          <option key={dept.id} value={dept.id.toString()}>
+                            {dept.name}
+                          </option>
+                        ))}
+                    </select>
+                    {errors.department_id && (
+                      <div className="invalid-feedback">
+                        {errors.department_id}
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                 <div className="row">
                   <div className="col-md-6 mb-3">
@@ -893,6 +918,7 @@ const EditEmployer = () => {
                           errors.contract_date ? "is-invalid" : ""
                         }`}
                         id="contract_date"
+                        name="contract_date"
                         value={formData.contract_date}
                         onChange={handleChange}
                       />
@@ -921,6 +947,7 @@ const EditEmployer = () => {
                           errors.salary ? "is-invalid" : ""
                         }`}
                         id="salary"
+                        name="salary"
                         value={formData.salary}
                         onChange={handleChange}
                         placeholder="Monthly salary"
@@ -962,6 +989,7 @@ const EditEmployer = () => {
                           errors.attendance_time ? "is-invalid" : ""
                         }`}
                         id="attendance_time"
+                        name="attendance_time"
                         value={formData.attendance_time}
                         onChange={handleChange}
                       />

@@ -50,9 +50,11 @@ const CreateEmployer = () => {
     const fetchDepartments = async () => {
       try {
         const response = await getDepartments();
-        setDepartments(response.data);
+        // Check if response.data exists, otherwise use the response directly
+        setDepartments(response.data || response);
       } catch (error) {
         toast.error("Failed to fetch departments", { theme: "light" });
+        setDepartments([]); // Set to empty array on error
       }
     };
     fetchDepartments();
@@ -167,7 +169,7 @@ const CreateEmployer = () => {
           }
           .nav-link {
             background: rgba(255, 255, 255, 0.2);
-            color: #264653 !important;
+            // color: #264653 !important;
             font-weight: 500;
             transition: all 0.3s ease;
             border-radius: 8px 8px 0 0;

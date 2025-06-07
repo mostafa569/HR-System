@@ -23,7 +23,7 @@ const getEmployers = async (
     }
 
     if (department) {
-      params.append("department", department);
+      params.append("department_name", department);
     }
 
     const validSortFields = [
@@ -114,7 +114,7 @@ const getDepartments = async () => {
   const response = await axios.get(`${API_URL}/departments`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  return response.data;
+  return response.data.data || [];
 };
 
 const getEmployer = async (id) => {

@@ -1,71 +1,66 @@
-import React, { useState } from 'react';
-import styles from '../styles/Login.module.css';
-import { useNavigate } from 'react-router-dom';
-import { loginUser } from '../services/authService';
-import { toast } from 'react-toastify';
-
+import React, { useState } from "react";
+import styles from "../styles/Login.module.css";
+import { useNavigate } from "react-router-dom";
+import { loginUser } from "../services/authService";
+import { toast } from "react-toastify";
 
 const Login = () => {
   const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+    email: "",
+    password: "",
   });
 
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
-//   const [msgError, setMsgError] = useState('');
-    const [message, setMessage] = useState('');
-    const [messageType, setMessageType] = useState('');
+  //   const [msgError, setMsgError] = useState('');
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
   const navigate = useNavigate();
 
   const validate = () => {
     const newErrors = {};
     if (!formData.email) {
-      newErrors.email = 'Email is required';
+      newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is not valid';
+      newErrors.email = "Email is not valid";
     }
 
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = "Password is required";
     } else if (!/^\w{6,}$/.test(formData.password)) {
-      newErrors.password = 'Password must be at least 6 characters';
+      newErrors.password = "Password must be at least 6 characters";
     }
 
     return newErrors;
   };
 
-
   const handleSubmit = async (e) => {
-   
-
     e.preventDefault();
     const validationErrors = validate();
     setErrors(validationErrors);
-     
 
     if (Object.keys(validationErrors).length === 0) {
       setIsLoading(true);
       try {
         const res = await loginUser(formData);
-         console.log('Login Response:', res);
-         if (res.message === 'Logged in successfully') {
-          toast.success('Logged in successfully');
-          localStorage.setItem('userToken', res.token);
-          navigate('/employers'); // Explicitly navigate to employers page
-      
-          console.log('Saved Token:', res.token);
-            console.log('From Local Storage:', localStorage.getItem('userToken'));
+        console.log("Login Response:", res);
+        if (res.message === "Logged in successfully") {
+          toast.success("Logged in successfully");
+          localStorage.setItem("userToken", res.token);
+          navigate("/"); // Explicitly navigate to employers page
+
+          console.log("Saved Token:", res.token);
+          console.log("From Local Storage:", localStorage.getItem("userToken"));
 
           setTimeout(() => {
-            navigate('/employer');
+            navigate("/");
           }, 1000);
         }
       } catch (err) {
-        console.log('Login Error:', err);
-        toast.error(err.response?.data?.message || 'Login failed');
-        setMessage(err.response?.data?.message || 'Login failed');
-        setMessageType('error');
+        console.log("Login Error:", err);
+        toast.error(err.response?.data?.message || "Login failed");
+        setMessage(err.response?.data?.message || "Login failed");
+        setMessageType("error");
 
         // setMsgError(err.response?.data?.message || 'Login failed');
       } finally {
@@ -87,9 +82,13 @@ const Login = () => {
                 type="email"
                 className="form-control p-2"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
               />
-              {errors.email && <div className="alert alert-danger">{errors.email}</div>}
+              {errors.email && (
+                <div className="alert alert-danger">{errors.email}</div>
+              )}
             </div>
 
             <div className="my-4 form-group">
@@ -99,15 +98,24 @@ const Login = () => {
                 type="password"
                 className="form-control p-2"
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
               />
-              {errors.password && <div className="alert alert-danger">{errors.password}</div>}
+              {errors.password && (
+                <div className="alert alert-danger">{errors.password}</div>
+              )}
             </div>
 
-            <button type="submit"  disabled={isLoading}>
-              Login {isLoading && <span><i className="fas fa-spin fa-spinner"></i></span>}
+            <button type="submit" disabled={isLoading}>
+              Login{" "}
+              {isLoading && (
+                <span>
+                  <i className="fas fa-spin fa-spinner"></i>
+                </span>
+              )}
             </button>
-                        {/* {message && (
+            {/* {message && (
                             <p className={`alert alert-${messageType === 'success' ? 'success' : 'danger'}  fade-in m-0`}>
                                {message}
                             </p>

@@ -6,6 +6,7 @@ import {
   deleteEmployer,
   attendEmployer,
   leaveEmployer,
+  getDepartments
 } from "../services/employerService";
 import {
   FiEdit2,
@@ -36,13 +37,13 @@ const EmployerList = () => {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [departmentFilter, setDepartmentFilter] = useState("");
+  const [allDepartments, setAllDepartments] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState("full_name");
   const [sortDirection, setSortDirection] = useState("asc");
   const [totalPages, setTotalPages] = useState(1);
   const navigate = useNavigate();
 
-  // Improved debounce function
   function debounce(func, wait) {
     let timeout;
     return (...args) => {
@@ -51,21 +52,25 @@ const EmployerList = () => {
     };
   }
 
-  // Debounced search function
+  useEffect(() => {
+    const fetchAllDepartments = async () => {
+      try {
+        const response = await getDepartments();
+        setAllDepartments(response);
+      } catch (error) {
+        console.error("Error fetching departments:", error);
+        toast.error("Failed to fetch departments", { theme: "colored" });
+      }
+    };
+    fetchAllDepartments();
+  }, []);
+
   const debouncedFetchEmployers = useCallback(
     debounce(async (page, dept, query, sort, direction) => {
       try {
         setLoading(true);
-        console.log("Fetching with params:", {
-          page,
-          dept,
-          query,
-          sort,
-          direction,
-        });
         const response = await getEmployers(page, dept, query, sort, direction);
-        console.log("API Response:", response);
-
+        
         if (response && response.data && Array.isArray(response.data)) {
           const transformedResponse = {
             data: response.data,
@@ -75,7 +80,6 @@ const EmployerList = () => {
           };
           setEmployers(transformedResponse);
           setTotalPages(transformedResponse.last_page);
-          console.log("Transformed response:", transformedResponse);
         } else {
           console.error("Invalid response format:", response);
           toast.error("Invalid response from server", { theme: "colored" });
@@ -90,9 +94,7 @@ const EmployerList = () => {
     []
   );
 
-  // Effect for search and filter changes
   useEffect(() => {
-    console.log("Search/Filter changed:", { searchQuery, departmentFilter });
     setCurrentPage(1);
     debouncedFetchEmployers(
       1,
@@ -109,13 +111,7 @@ const EmployerList = () => {
     sortDirection,
   ]);
 
-  // Effect for pagination and sorting
   useEffect(() => {
-    console.log("Pagination/Sort changed:", {
-      currentPage,
-      sortField,
-      sortDirection,
-    });
     debouncedFetchEmployers(
       currentPage,
       departmentFilter,
@@ -127,13 +123,11 @@ const EmployerList = () => {
 
   const handleSearchChange = (e) => {
     const value = e.target.value.trim();
-    console.log("Search value changed:", value);
     setSearchQuery(value);
   };
 
   const handleDepartmentFilterChange = (e) => {
     const value = e.target.value;
-    console.log("Department filter changed:", value);
     setDepartmentFilter(value);
     setCurrentPage(1);
   };
@@ -143,7 +137,6 @@ const EmployerList = () => {
       try {
         await deleteEmployer(id);
         toast.success("Employer deleted successfully", { theme: "colored" });
-        // Refresh current page
         debouncedFetchEmployers(
           currentPage,
           departmentFilter,
@@ -195,7 +188,6 @@ const EmployerList = () => {
   };
 
   const handleSort = (field) => {
-    console.log("Sort field changed:", field);
     const newDirection =
       sortField === field && sortDirection === "asc" ? "desc" : "asc";
     setSortField(field);
@@ -203,52 +195,6 @@ const EmployerList = () => {
     setCurrentPage(1);
   };
 
-  // Fixed unique departments calculation
-  const uniqueDepartments = React.useMemo(() => {
-    const departments = new Set();
-
-    
-    employers.data.forEach((emp) => {
-      if (emp.department?.name) {
-        departments.add(emp.department.name);
-      }
-    });
- 
-    if (departmentFilter && !departments.has(departmentFilter)) {
-      departments.add(departmentFilter);
-    }
-
-    return Array.from(departments).sort();
-  }, [employers.data, departmentFilter]);
-
-  // Initial data fetch
-  useEffect(() => {
-    console.log("Initial data fetch");
-    debouncedFetchEmployers(
-      currentPage,
-      departmentFilter,
-      searchQuery,
-      sortField,
-      sortDirection
-    );
-  }, [debouncedFetchEmployers]);
-
-  // Debug effect to monitor state changes
-  useEffect(() => {
-    console.log("Employers state updated:", employers);
-  }, [employers]);
-
-  // Debug effect to monitor filter state
-  useEffect(() => {
-    console.log("Filter state:", {
-      searchQuery,
-      departmentFilter,
-      sortField,
-      sortDirection,
-    });
-  }, [searchQuery, departmentFilter, sortField, sortDirection]);
-
-  // Handle empty state message
   const getEmptyStateMessage = () => {
     if (searchQuery && departmentFilter) {
       return "No employees found matching your search criteria and department filter.";
@@ -260,7 +206,6 @@ const EmployerList = () => {
     return "There are currently no employees in the system.";
   };
 
-  // Pagination handlers
   const handlePreviousPage = () => {
     if (currentPage > 1) {
       setCurrentPage(currentPage - 1);
@@ -279,14 +224,12 @@ const EmployerList = () => {
     }
   };
 
-  // Generate page numbers for pagination
   const getPageNumbers = () => {
     const pages = [];
-    const showPages = 5; // Show 5 page numbers
+    const showPages = 5;
     let start = Math.max(1, currentPage - Math.floor(showPages / 2));
     let end = Math.min(totalPages, start + showPages - 1);
 
-    // Adjust start if we're near the end
     if (end - start + 1 < showPages) {
       start = Math.max(1, end - showPages + 1);
     }
@@ -825,8 +768,7 @@ const EmployerList = () => {
                 <div>
                   <h1 className="header-title">Employee Management</h1>
                   <p className="header-subtitle">
-                    Manage your team members efficiently with our intuitive
-                    system
+                    Manage your team members efficiently with our intuitive system
                   </p>
                 </div>
               </div>
@@ -871,9 +813,9 @@ const EmployerList = () => {
                         onChange={handleDepartmentFilterChange}
                       >
                         <option value="">All Departments</option>
-                        {uniqueDepartments.map((dept) => (
-                          <option key={dept} value={dept}>
-                            {dept}
+                        {allDepartments.map((dept) => (
+                          <option key={dept.id} value={dept.name}>
+                            {dept.name}
                           </option>
                         ))}
                       </select>
@@ -915,7 +857,7 @@ const EmployerList = () => {
                 <button
                   style={{ width: "500px" }}
                   onClick={() => navigate("/employers/create")}
-                  className="btn btn-primary-gradient" // or w-64, w-80, etc.
+                  className="btn btn-primary-gradient"
                 >
                   <FiUserPlus className="me-2" size={20} />
                   Add
@@ -1017,7 +959,7 @@ const EmployerList = () => {
                             />
                           </div>
                         </th>
-                        <th className="text-end">Actions</th>
+                        <th className="">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1042,7 +984,7 @@ const EmployerList = () => {
                             <div className="d-flex align-items-center">
                               <FaIdCard className="me-2 table-icon" />
                               <span className="fw-medium">
-                                {employer.national_id || "N/A"}
+                                {employer.national_id || "-"}
                               </span>
                             </div>
                           </td>
@@ -1050,7 +992,7 @@ const EmployerList = () => {
                             <div className="d-flex align-items-center">
                               <FaBuilding className="me-2 table-icon" />
                               <span className="fw-medium">
-                                {employer.department?.name || "N/A"}
+                                {employer.department?.name || "-"}
                               </span>
                             </div>
                           </td>
@@ -1121,7 +1063,6 @@ const EmployerList = () => {
                   </table>
                 </div>
 
-                {/* Enhanced Pagination */}
                 <div className="pagination-container">
                   <div className="pagination-wrapper">
                     <div className="pagination-info">
@@ -1143,7 +1084,6 @@ const EmployerList = () => {
                       <div className="d-flex align-items-center">
                         {totalPages > 1 && (
                           <>
-                            {/* First page */}
                             {currentPage > 3 && (
                               <>
                                 <div
@@ -1158,7 +1098,6 @@ const EmployerList = () => {
                               </>
                             )}
 
-                            {/* Page numbers */}
                             {getPageNumbers().map((page) => (
                               <div
                                 key={page}
@@ -1171,7 +1110,6 @@ const EmployerList = () => {
                               </div>
                             ))}
 
-                            {/* Last page */}
                             {currentPage < totalPages - 2 && (
                               <>
                                 {currentPage < totalPages - 3 && (

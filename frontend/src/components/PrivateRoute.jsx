@@ -1,15 +1,15 @@
-import { Navigate, Outlet } from 'react-router-dom';
-import { toast } from 'react-toastify';
+// import { Navigate, Outlet } from 'react-router-dom';
+// import { toast } from 'react-toastify';
 
-const PrivateRoute = () => {
-  const token = localStorage.getItem('userToken');
+// const PrivateRoute = () => {
+//   const token = localStorage.getItem('userToken');
   
-  if (!token) {
-    toast.error('Please login to access this page');
-    return <Navigate to="/login" replace />;
-  }
+//   if (!token) {
+//     toast.error('Please login to access this page');
+//     return <Navigate to="/login" replace />;
+//   }
 
-  return <Outlet />;
-};
+//   return <Outlet />;
+// };
 
-export default PrivateRoute;
+// export default PrivateRoute;

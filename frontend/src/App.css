@@ -1,0 +1,218 @@
+.light-mode {
+    background-color: #f8f9fa;
+    color: #212529;
+  }
+  
+  .dark-mode {
+    background-color: #212529;
+    color: #fff;
+  }
+  
+  .dark-mode .bg-light {
+    background-color: #343a40 !important;
+  }
+  
+  .dark-mode .bg-white {
+    background-color: #343a40 !important;
+  }
+  
+  .dark-mode .text-dark {
+    color: #fff !important;
+  }
+  
+  .dark-mode .card {
+    background-color: #343a40;
+    color: #fff;
+  }
+  
+  .dark-mode .form-control {
+    background-color: #495057;
+    color: #fff;
+    border-color: #6c757d;
+  }
+  
+  .dark-mode .form-control::placeholder {
+    color: #ced4da;
+  }
+  
+  /* Colorful styles for Home page */
+  .dashboard-title {
+    color: #0a7dd9;
+    font-weight: 700;
+    font-size: 2.5rem;
+  }
+  
+  .dark-mode .dashboard-title {
+    color: #4dabf7;
+  }
+  
+  .card-employees {
+    background: linear-gradient(135deg, #e6f3fa 0%, #b3e0f2 100%);
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .dark-mode .card-employees {
+    background: linear-gradient(135deg, #2a4d69 0%, #1a3550 100%);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  }
+  
+  .card-employees:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  }
+  
+  .icon-employees {
+    color: #0a7dd9;
+  }
+  
+  .dark-mode .icon-employees {
+    color: #4dabf7;
+  }
+  
+  .card-attendance {
+    background: linear-gradient(135deg, #e6f4ea 0%, #b3e0c3 100%);
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .dark-mode .card-attendance {
+    background: linear-gradient(135deg, #2d5435 0%, #1e3a24 100%);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  }
+  
+  .card-attendance:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  }
+  
+  .icon-attendance {
+    color: #28a745;
+  }
+  
+  .dark-mode .icon-attendance {
+    color: #34c759;
+  }
+  
+  .card-requests {
+    background: linear-gradient(135deg, #fff3e6 0%, #ffdab3 100%);
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .dark-mode .card-requests {
+    background: linear-gradient(135deg, #5c3c1a 0%, #3f2a12 100%);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  }
+  
+  .card-requests:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  }
+  
+  .icon-requests {
+    color: #fd7e14;
+  }
+  
+  .dark-mode .icon-requests {
+    color: #ff9f43;
+  }
+  
+  .card-activity {
+    background: linear-gradient(135deg, #f3e6fa 0%, #d8c3e8 100%);
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .dark-mode .card-activity {
+    background: linear-gradient(135deg, #3b2d5c 0%, #2a2042 100%);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  }
+  
+  .card-activity:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  }
+  
+  .activity-item {
+    background-color: #f8f0ff;
+    border-radius: 8px;
+    margin-bottom: 5px;
+  }
+  
+  .dark-mode .activity-item {
+    background-color: #4b3a6d;
+  }
+  
+  .card-holidays {
+    background: linear-gradient(135deg, #e6f0ff 0%, #b3d4ff 100%);
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .dark-mode .card-holidays {
+    background: linear-gradient(135deg, #2a4066 0%, #1e2e4a 100%);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  }
+  
+  .card-holidays:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  }
+  
+  .icon-holidays {
+    color: #0a7dd9;
+  }
+  
+  .dark-mode .icon-holidays {
+    color: #4dabf7;
+  }
+  
+  .bg-employees-light {
+    background-color: #0a7dd9 !important;
+  }
+  
+  .bg-employees-dark {
+    background-color: #4dabf7 !important;
+  }
+  
+  .bg-attendance-light {
+    background-color: #28a745 !important;
+  }
+  
+  .bg-attendance-dark {
+    background-color: #34c759 !important;
+  }
+  
+  .bg-requests-light {
+    background-color: #fd7e14 !important;
+  }
+  
+  .bg-requests-dark {
+    background-color: #ff9f43 !important;
+  }
+  
+  .card-title-modern {
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+  
+  .animate-icon {
+    animation: pulse 1s ease-in-out;
+  }
+  
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
