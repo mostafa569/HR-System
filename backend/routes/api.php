@@ -6,6 +6,7 @@ use App\Http\Controllers\Employer\EmployerController;
 use App\Http\Controllers\Department\DepartmentController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Hr\HrController;
+use App\Http\Controllers\SalarySummary\SalarySummaryController;
 
 // Public routes
 Route::post('/hr/login', [HrAuthController::class, 'login']);
@@ -26,6 +27,13 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Holiday Management
     Route::apiResource('holidays', HolidayController::class);
+    
+    // Salary Management
+    Route::prefix('salary')->group(function () {
+        Route::get('/', [SalarySummaryController::class, 'index']);
+        Route::post('/calculate', [SalarySummaryController::class, 'calculate']);
+        Route::get('/summary/{employerId}', [SalarySummaryController::class, 'getSalarySummary']);
+    });
     
     // Dashboard Routes
     Route::prefix('dashboard')->group(function () {
