@@ -50,11 +50,11 @@ const CreateEmployer = () => {
     const fetchDepartments = async () => {
       try {
         const response = await getDepartments();
-        // Check if response.data exists, otherwise use the response directly
+         
         setDepartments(response.data || response);
       } catch (error) {
         toast.error("Failed to fetch departments", { theme: "light" });
-        setDepartments([]); // Set to empty array on error
+        setDepartments([]);  
       }
     };
     fetchDepartments();
@@ -103,7 +103,7 @@ const CreateEmployer = () => {
         setIsLoading(false);
       }
     } else {
-      // Highlight the first tab with errors
+    
       if (
         validationErrors.full_name ||
         validationErrors.gender ||
@@ -377,7 +377,7 @@ const CreateEmployer = () => {
                 border: "2px solid #e63946",
                 color: "#e63946",
                 fontWeight: "600",
-                padding: "0.375rem 0.75rem", // Reduced padding
+                padding: "0.375rem 0.75rem", 
                 borderRadius: "8px",
                 display: "flex",
                 alignItems: "center",
@@ -399,9 +399,9 @@ const CreateEmployer = () => {
             >
               <FaTimes
                 style={{
-                  marginRight: "0.4rem", // Slightly reduced margin
+                  marginRight: "0.4rem",  
                   transition: "transform 0.3s ease",
-                  fontSize: "0.9rem", // Slightly smaller icon
+                  fontSize: "0.9rem", 
                 }}
               />
               <span style={{ fontSize: "0.9rem" }}>Cancel</span>

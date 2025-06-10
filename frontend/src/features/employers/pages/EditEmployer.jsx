@@ -63,8 +63,7 @@ const EditEmployer = () => {
           throw new Error("Invalid employer data received");
         }
 
-        console.log("Employer data:", employerResponse);
-        console.log("Departments data:", departmentsResponse);
+       
 
         const formatTimeForInput = (time) => {
           if (!time) return "";
@@ -96,8 +95,8 @@ const EditEmployer = () => {
         });
 
         if (departmentsResponse) {
-          console.log("Setting departments:", departmentsResponse);
-          setDepartments(departmentsResponse);
+          // console.log("Setting departments:", departmentsResponse);
+          setDepartments(Array.isArray(departmentsResponse.data) ? departmentsResponse.data : []);
         }
 
         setLoading(false);
@@ -143,15 +142,15 @@ const EditEmployer = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    console.log("Field changed:", name, "New value:", value);
+   
 
-    // تحديث حالة النموذج مباشرة
+    
     setFormData((prevData) => ({
       ...prevData,
       [name]: value,
     }));
 
-    // مسح رسالة الخطأ إذا وجدت
+     
     if (errors[name]) {
       setErrors((prevErrors) => ({
         ...prevErrors,

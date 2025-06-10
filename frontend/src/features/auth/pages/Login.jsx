@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import styles from "../styles/Login.module.css";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { loginUser } from "../services/authService";
 import { toast } from "react-toastify";
 
@@ -16,6 +16,7 @@ const Login = () => {
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
 
   const validate = () => {
     const newErrors = {};
@@ -43,18 +44,15 @@ const Login = () => {
       setIsLoading(true);
       try {
         const res = await loginUser(formData);
-        console.log("Login Response:", res);
+        // console.log("Login Response:", res);
         if (res.message === "Logged in successfully") {
           toast.success("Logged in successfully");
           localStorage.setItem("userToken", res.token);
-          navigate("/"); // Explicitly navigate to employers page
+          localStorage.setItem("userData", JSON.stringify(res.user)); 
 
-          console.log("Saved Token:", res.token);
-          console.log("From Local Storage:", localStorage.getItem("userToken"));
-
-          setTimeout(() => {
-            navigate("/");
-          }, 1000);
+          // Get the redirect path from location state or default to home
+          const from = location.state?.from?.pathname || "/";
+          navigate(from, { replace: true });
         }
       } catch (err) {
         console.log("Login Error:", err);

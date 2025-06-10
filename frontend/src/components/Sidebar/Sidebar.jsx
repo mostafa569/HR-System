@@ -39,6 +39,12 @@ export default function Sidebar({ sidebarOpen, darkMode }) {
   };
 
   const isActive = (path) => {
+    if (path === "/employers") {
+      return location.pathname === "/employers";
+    }
+    if (path === "/employers/salary-summaries") {
+      return location.pathname === "/employers/salary-summaries";
+    }
     return location.pathname === path;
   };
 
@@ -57,7 +63,7 @@ export default function Sidebar({ sidebarOpen, darkMode }) {
           >
             <FaHome className="me-3" style={{ fontSize: "1.5rem" }} /> Home
           </NavLink>
-          <NavLink
+          {/* <NavLink
             to="/admin"
             className={({ isActive }) =>
               `nav-link ${styles.navLink} ${isActive ? styles.active : ""}`
@@ -65,12 +71,30 @@ export default function Sidebar({ sidebarOpen, darkMode }) {
           >
             <FaUserShield className="me-3" style={{ fontSize: "1.5rem" }} />{" "}
             Admin
+          </NavLink> */}
+          <NavLink
+            to={
+              JSON.parse(localStorage.getItem("userData"))?.role ===
+              "super admin"
+                ? "/super-admin-control"
+                : JSON.parse(localStorage.getItem("userData"))?.role === "hr"
+                ? "/hr-control"
+                : "/unauthorized"
+            }
+            className={({ isActive }) =>
+              `nav-link ${styles.navLink} ${isActive ? styles.active : ""}`
+            }
+          >
+            <FaUserShield className="me-3" style={{ fontSize: "1.5rem" }} />{" "}
+            Admin
           </NavLink>
+
           <NavLink
             to="/employers"
             className={({ isActive }) =>
               `nav-link ${styles.navLink} ${isActive ? styles.active : ""}`
             }
+            end
           >
             <FaUsers className="me-3" style={{ fontSize: "1.5rem" }} />{" "}
             Employees
@@ -103,7 +127,7 @@ export default function Sidebar({ sidebarOpen, darkMode }) {
             Holidays
           </NavLink>
           <NavLink
-            to="/summary-salary"
+            to="/employers/salary-summaries"
             className={({ isActive }) =>
               `nav-link ${styles.navLink} ${isActive ? styles.active : ""}`
             }
@@ -111,7 +135,7 @@ export default function Sidebar({ sidebarOpen, darkMode }) {
             <FaMoneyCheckAlt className="me-3" style={{ fontSize: "1.5rem" }} />{" "}
             Summary Salary
           </NavLink>
-          {/* <NavLink
+          <NavLink
             to="/employers/adjustments"
             className={({ isActive }) =>
               `nav-link ${styles.navLink} ${isActive ? styles.active : ""}`
@@ -119,7 +143,7 @@ export default function Sidebar({ sidebarOpen, darkMode }) {
           >
             <FaCog className="me-3" style={{ fontSize: "1.5rem" }} />{" "}
             Adjustments
-          </NavLink> */}
+          </NavLink>
           <button
             onClick={handleLogout}
             className={`nav-link border-0 bg-transparent w-100 text-start ${styles.navLink}`}
