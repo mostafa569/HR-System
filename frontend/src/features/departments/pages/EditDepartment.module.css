@@ -1,0 +1,334 @@
+/* src/components/EditDepartment.module.css */
+
+/* Define color variables for consistency across all components */
+:root {
+    --color-primary: #6c5ce7; /* Vibrant purple */
+    --color-secondary: #00cec9; /* Teal */
+    --color-danger: #ff6b6b; /* Lively red */
+    --color-warning: #ffeaa7; /* Soft yellow */
+    --color-success: #55efc4; /* Mint green */
+    --color-text-dark: #2d3436; /* Very dark gray */
+    --color-text-light: #ecf0f1; /* Light gray / almost white */
+    --color-background-light: #f5f6fa; /* Off-white for general background */
+    --color-card-background: #ffffff; /* Pure white for cards */
+    --color-border: #dfe6e9; /* Light gray for borders */
+
+    --shadow-soft: 0 4px 15px rgba(0, 0, 0, 0.1);
+    --shadow-medium: 0 8px 25px rgba(0, 0, 0, 0.15);
+    --border-radius-large: 20px;
+    --border-radius-medium: 12px;
+    --border-radius-small: 8px; /* Used for buttons/inputs within cards */
+}
+
+/* Page Container for consistent layout */
+.page-container {
+    padding: 30px;
+    min-height: calc(100vh - 80px); /* Adjust based on your header/footer height */
+    background-color: var(--color-background-light);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* Align to top to allow scrolling */
+    font-family: 'Inter', sans-serif; /* Modern, clean font */
+}
+
+/* Animated Card Base (for loading, error, and main form) */
+.animated-card {
+    animation: fadeInScaleUp 0.6s ease-out forwards;
+    opacity: 0;
+    transform: scale(0.95) translateY(20px);
+}
+
+@keyframes fadeInScaleUp {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Status Cards (Loading, Error) */
+.status-card {
+    background-color: var(--color-card-background);
+    border-radius: var(--border-radius-large);
+    box-shadow: var(--shadow-medium);
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    max-width: 500px;
+    width: 100%;
+}
+
+.loading-card {
+    color: var(--color-primary);
+}
+
+.error-card {
+    color: var(--color-danger);
+    border: 2px solid var(--color-danger);
+}
+
+.status-icon {
+    font-size: 3rem;
+    margin-bottom: 20px;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border-width: 5px;
+    margin-bottom: 20px;
+    color: var(--color-primary); /* Bootstrap spinner color */
+}
+
+.status-text {
+    font-size: 1.2rem;
+    font-weight: 500;
+    margin-bottom: 25px;
+    color: var(--color-text-dark);
+}
+
+/* Main Card Container for the form */
+.card-container {
+    background-color: var(--color-card-background);
+    border-radius: var(--border-radius-large);
+    box-shadow: var(--shadow-medium);
+    width: 100%;
+    max-width: 700px; /* Adjust max-width as needed */
+    padding: 35px 40px;
+}
+
+/* Card Header */
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 20px;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+}
+
+.header-icon-wrapper {
+    background-color: var(--color-primary);
+    border-radius: 50%;
+    padding: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-right: 20px;
+    box-shadow: 0 6px 20px rgba(var(--color-primary), 0.3);
+}
+
+.header-icon {
+    font-size: 1.8rem;
+    color: var(--color-text-light);
+}
+
+.header-title {
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: var(--color-text-dark);
+    margin: 0;
+}
+
+.header-subtitle {
+    font-size: 0.95rem;
+    color: #6a737d; /* A softer gray */
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+}
+
+.info-icon {
+    font-size: 1.1rem;
+    color: var(--color-secondary);
+    margin-right: 5px;
+}
+
+/* Form Section */
+.form-section {
+    padding-top: 20px;
+}
+
+.form-label {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--color-text-dark);
+    margin-bottom: 8px;
+    display: block;
+}
+
+.input-group-styled {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-small);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.input-group-styled:focus-within {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(var(--color-primary), 0.2);
+}
+
+.input-group-icon {
+    padding: 10px 15px;
+    background-color: #f0f2f5; /* Lighter background for the icon */
+    color: var(--color-text-dark);
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-right: 1px solid var(--color-border);
+}
+
+.form-control-styled {
+    border: none;
+    padding: 12px 15px;
+    font-size: 1rem;
+    color: var(--color-text-dark);
+    flex-grow: 1;
+    outline: none; /* Remove default focus outline */
+}
+
+.form-control-styled::placeholder {
+    color: #8c96a3; /* Softer placeholder text */
+}
+
+.form-control-styled:disabled {
+    background-color: #e9ecef;
+    cursor: not-allowed;
+}
+
+.form-control-styled.is-invalid {
+    border-color: var(--color-danger);
+}
+
+/* Invalid Feedback for Form */
+.invalid-feedback {
+    color: var(--color-danger);
+    font-size: 0.875rem;
+    margin-top: 8px;
+    display: block; /* Ensure it takes its own line */
+}
+
+/* Buttons */
+.btn-base {
+    padding: 10px 25px;
+    border-radius: var(--border-radius-small);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Primary Solid Button (Save) */
+.btn-primary-solid {
+    composes: btn-base; /* Inherit base styles */
+    background-color: var(--color-primary);
+    color: var(--color-text-light);
+    border: 2px solid var(--color-primary);
+    box-shadow: var(--shadow-soft);
+}
+
+.btn-primary-solid:hover:not(:disabled) {
+    background-color: #5c4ce3; /* Slightly darker primary */
+    box-shadow: 0 6px 20px rgba(var(--color-primary), 0.4);
+    transform: translateY(-2px);
+}
+
+.btn-primary-solid:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: var(--shadow-soft);
+}
+
+.btn-primary-solid:disabled {
+    background-color: #b0a8e0; /* Lighter primary for disabled */
+    border-color: #b0a8e0;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* Secondary Outline Button (Cancel/Retry) */
+.btn-secondary-outline {
+    composes: btn-base; /* Inherit base styles */
+    background: transparent;
+    border: 2px solid var(--color-secondary);
+    color: var(--color-secondary);
+}
+
+.btn-secondary-outline:hover {
+    background: var(--color-secondary);
+    color: var(--color-text-light);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(var(--color-secondary), 0.3);
+}
+
+.btn-secondary-outline:active {
+    transform: translateY(0);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .page-container {
+        padding: 20px;
+    }
+    .card-container {
+        padding: 25px 30px;
+    }
+    .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    .header-icon-wrapper {
+        margin-right: 0;
+        margin-bottom: 15px;
+    }
+    .header-title {
+        font-size: 1.7rem;
+    }
+    .header-subtitle {
+        font-size: 0.9rem;
+    }
+    .btn-base {
+        width: 100%; /* Make buttons full width on smaller screens */
+    }
+    .d-flex.justify-content-end {
+        justify-content: center !important; /* Center the save button */
+    }
+}
+
+@media (max-width: 576px) {
+    .status-card {
+        padding: 30px;
+    }
+    .header-icon {
+        font-size: 1.5rem;
+    }
+    .header-title {
+        font-size: 1.5rem;
+    }
+    .form-label {
+        font-size: 0.95rem;
+    }
+    .form-control-styled {
+        padding: 10px 12px;
+        font-size: 0.9rem;
+    }
+}
