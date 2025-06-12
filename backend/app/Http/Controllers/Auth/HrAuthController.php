@@ -26,9 +26,7 @@ class HrAuthController extends Controller
             return response()->json(['message' => 'Invalid email or password'], 401);
 
         }
-
-        $hr->tokens()->delete();
-
+         $hr->tokens()->delete();
         $token = $hr->createToken('hr_token')->plainTextToken;
 
         return response()->json([
@@ -48,4 +46,3 @@ class HrAuthController extends Controller
 
 
 }
-

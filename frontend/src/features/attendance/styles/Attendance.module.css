@@ -1,0 +1,61 @@
+.container {
+  padding: 20px;
+  background: #f0f2f5;
+  min-height: 100vh;
+}
+
+.header {
+  color: #1890ff;
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+
+.filters {
+  background: #fff;
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  margin-bottom: 20px;
+}
+
+.filters > div {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.tableContainer {
+  background: #fff;
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.previewTable {
+  margin-top: 20px;
+}
+
+.ant-table {
+  border: 1px solid #f0f0f0;
+}
+
+.ant-btn-primary {
+  background: #1890ff;
+  border-color: #1890ff;
+}
+
+.ant-btn-primary:hover {
+  background: #40a9ff;
+  border-color: #40a9ff;
+}
+
+.ant-btn-danger {
+  background: #ff4d4f;
+  border-color: #ff4d4f;
+}
+
+.ant-btn-danger:hover {
+  background: #ff7875;
+  border-color: #ff7875;
+}

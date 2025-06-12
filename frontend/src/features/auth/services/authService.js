@@ -1,6 +1,9 @@
-import axios from 'axios';
+import axios from "axios";
 
+import api from '../services/api'; 
 export const loginUser = async (data) => {
-  const res = await axios.post('http://127.0.0.1:8000/api/hr/login', data);
+  // const res = await axios.post("/api/hr/login", data);
+  
+  const res = await api.post("/hr/login", data);
   return res.data;
 };
