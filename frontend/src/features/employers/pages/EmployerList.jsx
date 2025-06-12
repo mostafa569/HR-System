@@ -808,7 +808,7 @@ const EmployerList = () => {
                               disabled={loading}
                               aria-label={`View salary summary for ${employer.full_name}`}
                             >
-                              <FaMoneyBillWave size={16} />
+                              <FaMoneyBillWave size={16} />  
                             </button>
                           </td>
                           <td data-label="Actions">

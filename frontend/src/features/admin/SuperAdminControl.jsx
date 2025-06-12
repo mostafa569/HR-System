@@ -167,6 +167,7 @@ const SuperAdminControl = () => {
                     <td style={{ textAlign: "center" }}>
                       <Button
                         onClick={() => navigate(`/edit-user/${user.id}`)}
+                        disabled={!canEdit(user)}
                         title="Edit User"
                         className="action-btn bg-cyan-100 text-cyan-600 me-2 p-2 rounded-lg hover:bg-cyan-200 transition-colors"
                         style={{ minWidth: "36px", minHeight: "36px" }}

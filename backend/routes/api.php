@@ -8,7 +8,7 @@ use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Hr\HrController;
 use App\Http\Controllers\SalarySummary\SalarySummaryController;
 use App\Http\Controllers\Adjustment\AdjustmentController;
-
+use App\Http\Controllers\Attendance\AttendanceController;
 // Public routes
 Route::post('/hr/login', [HrAuthController::class, 'login']);
 
@@ -51,4 +51,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/adjustments/{id}', [AdjustmentController::class, 'show']);
     Route::put('/adjustments/{id}', [AdjustmentController::class, 'update']);
     Route::delete('/adjustments/{id}', [AdjustmentController::class, 'destroy']);
+   
+    // Attendance Management
+    Route::apiResource('attendances', AttendanceController::class);
     ;});

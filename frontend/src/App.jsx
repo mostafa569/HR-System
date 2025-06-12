@@ -22,7 +22,7 @@ import "@fortawesome/fontawesome-free/css/all.min.css";
 import DepartmentList from "./features/departments/pages/DepartmentList";
 import CreateDepartment from "./features/departments/pages/CreateDepartment";
 import EditDepartment from "./features/departments/pages/EditDepartment";
-
+import Attendance from "./features/attendance/pages/Attendance.jsx";
 function App() {
   return (
     <BrowserRouter>
@@ -45,7 +45,7 @@ function App() {
             path="/employers/:id/adjustments"
             element={<EmployerAdjustments />}
           />
-          
+            <Route path="/attendance" element={<Attendance />} />
           <Route
             path="/employers/:id/salary-summary"
             element={<SalarySummary />}

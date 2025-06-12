@@ -49,11 +49,11 @@ class SalaryCalculationService
                 'total_deductions' => $adjustmentCalculations['total_deductions'],
                 'final_salary' => $salaryCalculations['final_salary'],
             ];
-
+            
             $this->saveSalarySummary($employerId, $year, $month, $dateRange, $attendanceDays, $absentDays, $adjustmentCalculations, $salaryCalculations);
 
             DB::commit();
-
+             
             return $this->formatSalaryResponse($employerId, $year, $month, $dateRange, $daysInMonth, $baseSalary, $hourlyRate, $attendanceDays, $absentDays, $adjustmentCalculations, $salaryCalculations, $workingHoursPerDay);
 
         } catch (\Exception $e) {
@@ -64,23 +64,25 @@ class SalaryCalculationService
     }
 
     protected function calculateWorkingHoursPerDay($employer)
-    {
-        if (!$employer->attendance_time || !$employer->leave_time) {
-            return 8;
-        }
-
-        $attendance = Carbon::createFromTimeString($employer->attendance_time);
-        $leave = Carbon::createFromTimeString($employer->leave_time);
-
-        $workingHours = abs($leave->diffInHours($attendance));
-
-        if ($workingHours > 12) {
-            $workingHours = 24 - $workingHours;
-        }
-
-        return $workingHours;
+{
+    if (!$employer->attendance_time || !$employer->leave_time) {
+        return 8;  
     }
 
+     
+    $attendance = Carbon::createFromTimeString($employer->attendance_time);
+    $leave = Carbon::createFromTimeString($employer->leave_time);
+
+     
+    $workingHours = abs($leave->diffInHours($attendance));
+
+     
+    if ($workingHours > 12) {
+        $workingHours = 24 - $workingHours;
+    }
+
+    return $workingHours;
+}
     protected function getEmployer($employerId)
     {
         return Employer::findOrFail($employerId);
@@ -135,15 +137,17 @@ class SalaryCalculationService
         $totalDeductions = 0;
 
         foreach ($adjustments as $adjustment) {
-            $value = abs(floatval($adjustment->value ?? 0));
+            $value = floatval($adjustment->value ?? 0);
+            if ($value <= 0) continue;
 
             if ($adjustment->value_type === 'hours') {
+                $monetaryValue = $value * $hourlyRate;
                 if ($adjustment->kind === 'addition') {
                     $additionsHours += $value;
-                    $totalAdditions += $value * $hourlyRate;
+                    $totalAdditions += $monetaryValue;
                 } else if ($adjustment->kind === 'deduction') {
                     $deductionsHours += $value;
-                    $totalDeductions += $value * $hourlyRate;
+                    $totalDeductions += $monetaryValue;
                 }
             } else if ($adjustment->value_type === 'money') {
                 if ($adjustment->kind === 'addition') {
@@ -153,6 +157,9 @@ class SalaryCalculationService
                 }
             }
         }
+
+       
+        // $totalAdditions += ($additionsHours * $hourlyRate);
 
         return [
             'additions_hours' => round($additionsHours, 2),
@@ -171,7 +178,7 @@ class SalaryCalculationService
     {
         $dailySalary = $baseSalary / $daysInMonth;
         $absentDeduction = $absentDays * $dailySalary;
-
+        
         $finalSalary = max(0, $baseSalary - $absentDeduction + $adjustmentCalculations['total_additions'] - $adjustmentCalculations['total_deductions']);
 
         return [
@@ -183,13 +190,15 @@ class SalaryCalculationService
 
     protected function saveSalarySummary($employerId, $year, $month, $dateRange, $attendanceDays, $absentDays, $adjustmentCalculations, $salaryCalculations)
     {
+         
         $monthName = Carbon::create()->month($month)->format('F');
-
+    
+         
         $existingSummary = SalarySummary::where('employer_id', $employerId)
             ->where('year', $year)
             ->where('month', $monthName)
             ->first();
-
+    
         $data = [
             'employer_id' => $employerId,
             'month' => $monthName,
@@ -202,12 +211,12 @@ class SalaryCalculationService
             'total_deductions' => $adjustmentCalculations['total_deductions'],
             'final_salary' => $salaryCalculations['final_salary'],
         ];
-
+    
         if ($existingSummary) {
             $existingSummary->update($data);
             return $existingSummary;
         }
-
+    
         return SalarySummary::create($data);
     }
 
@@ -230,15 +239,5 @@ class SalaryCalculationService
             'absent_deduction' => $salaryCalculations['absent_deduction'],
             'final_salary' => $salaryCalculations['final_salary'],
         ];
-    }
-
-    // New public method to get employer's hourly rate
-    public function getEmployerHourlyRate($employerId)
-    {
-        $employer = $this->getEmployer($employerId);
-        $baseSalary = $employer->salary;
-        $daysInMonth = 30; // Standardized
-        $workingHoursPerDay = $this->calculateWorkingHoursPerDay($employer);
-        return $this->calculateHourlyRate($baseSalary, $daysInMonth, $workingHoursPerDay);
     }
 }
