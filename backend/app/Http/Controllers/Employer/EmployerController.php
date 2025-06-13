@@ -138,7 +138,9 @@ class EmployerController extends Controller
         ]);
 
         $employer->update($validated);
-
+     if (isset($validated['department_id'])) {
+            $employer->attendances()->update(['department_id' => $validated['department_id']]);
+        }
         return response()->json($employer);
     }
 
