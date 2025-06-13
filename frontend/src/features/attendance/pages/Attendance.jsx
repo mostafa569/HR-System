@@ -396,14 +396,14 @@ const Attendance = () => {
             style={{ width: 300, marginBottom: 10 }}
             onChange={handleDateRangeChange}
           />
-          <Button
+          {/* <Button
             icon={<PlusOutlined />}
             type="primary"
             style={{ marginBottom: 10 }}
             onClick={() => setIsAddModalVisible(true)}
           >
             Add Attendance
-          </Button>
+          </Button> */}
         </div>
       </div>
       <div className={styles.tableContainer}>
