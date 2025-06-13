@@ -5,6 +5,7 @@ use Carbon\Carbon;
 use App\Http\Controllers\Controller;
 use App\Models\Employer;
 use App\Models\Attendance;
+use App\Models\Holiday;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -138,9 +139,12 @@ class EmployerController extends Controller
         ]);
 
         $employer->update($validated);
-     if (isset($validated['department_id'])) {
+
+        
+        if (isset($validated['department_id'])) {
             $employer->attendances()->update(['department_id' => $validated['department_id']]);
         }
+
         return response()->json($employer);
     }
 
@@ -168,6 +172,16 @@ class EmployerController extends Controller
 
         $today = Carbon::today();
  
+      
+        $holiday = Holiday::where('date', $today)->first();
+        if ($holiday) {
+            return response()->json([
+                'message' => 'Cannot mark attendance on a holiday',
+                'holiday_name' => $holiday->name,
+                'holiday_type' => $holiday->type
+            ], 400);
+        }
+
         $attendance = Attendance::where('employer_id', $id)
             ->where('date', $today)
             ->first();
@@ -198,6 +212,15 @@ class EmployerController extends Controller
         }
 
         $today = Carbon::today();
+
+        $holiday = Holiday::where('date', $today)->first();
+        if ($holiday) {
+            return response()->json([
+                'message' => 'Cannot mark leave time on a holiday',
+                'holiday_name' => $holiday->name,
+                'holiday_type' => $holiday->type
+            ], 400);
+        }
 
         $attendance = Attendance::where('employer_id', $id)
             ->where('date', $today)
