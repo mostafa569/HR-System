@@ -1,181 +1,224 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import departmentService from '../services/departmentService';
-import { useParams, useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import React, { useState, useEffect, useCallback } from "react";
+import departmentService from "../services/departmentService";
+import { useParams, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import {
-    IoPencilOutline,
-    IoSaveOutline,
-    IoCloseCircleOutline,
-    IoInformationCircleOutline,
-    IoPricetagOutline,
-    IoRefreshOutline
-} from 'react-icons/io5';
-import styles from './EditDepartment.module.css';
+  IoPencilOutline,
+  IoSaveOutline,
+  IoCloseCircleOutline,
+  IoInformationCircleOutline,
+  IoPricetagOutline,
+  IoRefreshOutline,
+} from "react-icons/io5";
+import styles from "./EditDepartment.module.css";
 
 const EditDepartment = () => {
-    const { id } = useParams();
-    const navigate = useNavigate();
+  const { id } = useParams();
+  const navigate = useNavigate();
 
-    const [departmentName, setDepartmentName] = useState('');
-    const [isLoading, setIsLoading] = useState(true);
-    const [isSaving, setIsSaving] = useState(false);
-    const [error, setError] = useState(null);
+  const [department, setDepartment] = useState({
+    name: "",
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errors, setErrors] = useState({});
 
-    const fetchDepartment = useCallback(async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            const data = await departmentService.getDepartmentById(id);
+  const fetchDepartment = useCallback(async () => {
+    setIsLoading(true);
+    setErrors({});
+    try {
+      const response = await departmentService.getDepartmentById(id);
 
-            setDepartmentName(data.name); 
-            toast.success("Department data loaded successfully!", { theme: "light" });
-        } catch (err) {
-            console.error('Error fetching department:', err);
-            setError('Failed to load department data. Please check your network or try again.');
-            toast.error('Error loading department data: ' + (err.response?.data?.message || err.message), { theme: "light" });
-        } finally {
-            setIsLoading(false);
+      if (response && response.department) {
+        const departmentData = response.department;
+        setDepartment({
+          name: departmentData.name || "",
+        });
+        // toast.success("Department data loaded successfully!", {
+        //   position: "top-right",
+        //   theme: "colored",
+        // });
+      } else {
+        throw new Error("Invalid department data format");
+      }
+    } catch (err) {
+      console.error("Error details:", {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message,
+      });
+      toast.error(
+        "Error loading department: " +
+          (err.response?.data?.message || err.message),
+        {
+          position: "top-right",
+          theme: "colored",
         }
-    }, [id]);
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [id]);
 
-    useEffect(() => {
-        fetchDepartment();
-    }, [fetchDepartment]);
+  useEffect(() => {
+    fetchDepartment();
+  }, [fetchDepartment]);
 
-    const handleSubmit = useCallback(async (e) => {
-        e.preventDefault();
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setDepartment((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+    
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: undefined }));
+    }
+  };
 
-      
-        if (!departmentName.trim()) {
-            setError('Department name cannot be empty.');
-            toast.error("Department name cannot be empty.", { theme: "light" });
-            return;
-        }
-
-        setIsSaving(true);
-        setError(null);
-
-        try {
-           
-            await departmentService.updateDepartment(id, { name: departmentName }); // الـ Backend يتوقع 'name' للتحديثات
-            toast.success('Department updated successfully!', { theme: "light" });
-            navigate('/departments');
-        } catch (err) {
-            console.error('Error updating department:', err);
-            setError('Failed to update department. Please try again.');
-            toast.error('Error updating department: ' + (err.response?.data?.message || err.message), { theme: "light" });
-        } finally {
-            setIsSaving(false);
-        }
-    }, [id, departmentName, navigate]);
-
-    if (isLoading) {
-        return (
-            <div className={styles["page-container"]}>
-                <div className={`${styles["status-card"]} ${styles["loading-card"]} ${styles["animated-card"]}`}>
-                    <div className={`${styles.spinner} spinner-border`} role="status">
-                        <span className="visually-hidden">Loading...</span>
-                    </div>
-                    <p className={styles["status-text"]}>Loading department data...</p>
-                </div>
-            </div>
-        );
+  const validate = () => {
+    const newErrors = {};
+    if (!department.name.trim()) {
+      newErrors.name = "Department name is required";
+    } else if (department.name.trim().length < 3) {
+      newErrors.name = "Department name must be at least 3 characters";
     }
 
-    if (error && !isLoading) {
-        return (
-            <div className={styles["page-container"]}>
-                <div className={`${styles["status-card"]} ${styles["error-card"]} ${styles["animated-card"]}`}>
-                    <IoInformationCircleOutline className={styles["status-icon"]} />
-                    <p className={styles["status-text"]}>{error}</p>
-                    <button
-                        className={`${styles["btn-secondary-outline"]}`}
-                        onClick={fetchDepartment}
-                        aria-label="Retry loading department data"
-                    >
-                        <IoRefreshOutline className="me-2" />
-                        Retry
-                    </button>
-                </div>
-            </div>
-        );
-    }
+    return newErrors;
+  };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const validationErrors = validate();
+    setErrors(validationErrors);
+
+    if (Object.keys(validationErrors).length === 0) {
+      setIsSaving(true);
+      try {
+        await departmentService.updateDepartment(id, department);
+        // toast.success("Department updated successfully!", {
+        //   position: "top-right",
+        //   theme: "colored",
+        // });
+        navigate("/departments");
+      } catch (err) {
+        console.error("Error updating department:", err);
+        toast.error(
+          "Error updating department: " +
+            (err.response?.data?.message || err.message),
+          {
+            position: "top-right",
+            theme: "colored",
+          }
+        );
+      } finally {
+        setIsSaving(false);
+      }
+    }
+  };
+
+  if (isLoading) {
     return (
-        <div className={styles["page-container"]}>
-            <div className={`${styles["card-container"]} ${styles["animated-card"]}`}>
-                <div className={styles["card-header"]}>
-                    <div className={styles["header-content"]}>
-                        <div className={styles["header-icon-wrapper"]}>
-                            <IoPencilOutline className={styles["header-icon"]} />
-                        </div>
-                        <div>
-                            <h2 className={styles["header-title"]}>Edit Department</h2>
-                            <p className={styles["header-subtitle"]}>
-                                <IoInformationCircleOutline className={styles["info-icon"]} />
-                                Modify department details below.
-                            </p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={() => navigate("/departments")}
-                        className={`${styles["btn-secondary-outline"]}`}
-                    >
-                        <IoCloseCircleOutline className="me-2" />
-                        Cancel
-                    </button>
-                </div>
-
-                <form onSubmit={handleSubmit} className={styles["form-section"]}>
-                    <div className="mb-4">
-                        <label htmlFor="departmentName" className={styles["form-label"]}>
-                            Department Name
-                        </label>
-                        <div className={styles["input-group-styled"]}>
-                            <span className={styles["input-group-icon"]}>
-                                <IoPricetagOutline />
-                            </span>
-                            <input
-                                type="text"
-                                className={`${styles["form-control-styled"]} ${error ? styles["is-invalid"] : ""
-                                    }`}
-                                id="departmentName"
-                                value={departmentName}
-                                onChange={(e) => setDepartmentName(e.target.value)}
-                                disabled={isSaving}
-                                placeholder="e.g., Sales & Marketing"
-                            />
-                        </div>
-                        {error && <div className={styles["invalid-feedback"]}>{error}</div>}
-                    </div>
-
-                    <div className="d-flex justify-content-end">
-                        <button
-                            type="submit"
-                            className={`${styles["btn-primary-solid"]}`}
-                            disabled={isSaving}
-                        >
-                            {isSaving ? (
-                                <>
-                                    <span
-                                        className="spinner-border spinner-border-sm me-2"
-                                        role="status"
-                                        aria-hidden="true"
-                                    ></span>
-                                    Updating...
-                                </>
-                            ) : (
-                                <>
-                                    <IoSaveOutline className="me-2" />
-                                    Update Department
-                                </>
-                            )}
-                        </button>
-                    </div>
-                </form>
-            </div>
+      <div className={styles.pageContainer}>
+        <div className={styles.loadingContainer}>
+          <div className={styles.loadingSpinner}></div>
+          <h3 className={styles.loadingText}>Loading Department Data...</h3>
+          <p className={styles.loadingSubtext}>
+            Please wait while we fetch the department details
+          </p>
         </div>
+      </div>
     );
+  }
+
+  return (
+    <div className={styles.pageContainer}>
+      <div className={styles.cardContainer}>
+        <div className={styles.cardHeader}>
+          <div className={styles.headerContent}>
+            <div className={styles.headerIconWrapper}>
+              <IoPencilOutline className={styles.headerIcon} size={24} />
+            </div>
+            <div>
+              <h1 className={styles.headerTitle}>Edit Department</h1>
+              <p className={styles.headerSubtitle}>
+                <IoInformationCircleOutline
+                  className={styles.infoIcon}
+                  size={18}
+                />
+                Update the department information below
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate("/departments")}
+            className={styles.cancelButton}
+            disabled={isSaving}
+          >
+            <IoCloseCircleOutline className={styles.cancelIcon} size={18} />
+            Cancel
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className={styles.formContainer}>
+          <div className={styles.formGroup}>
+            <label htmlFor="name" className={styles.formLabel}>
+              <IoPricetagOutline className={styles.labelIcon} size={18} />
+              Department Name
+              <span className={styles.requiredIndicator}>*</span>
+            </label>
+            <input
+              type="text"
+              className={`${styles.formInput} ${
+                errors.name ? styles.inputError : ""
+              }`}
+              id="name"
+              name="name"
+              value={department.name}
+              onChange={handleChange}
+              disabled={isSaving}
+              placeholder="e.g., Human Resources"
+            />
+            {errors.name && (
+              <div className={styles.errorMessage}>{errors.name}</div>
+            )}
+          </div>
+
+          <div className={styles.formActions}>
+            <button
+              type="button"
+              onClick={() => navigate("/departments")}
+              className={styles.secondaryButton}
+              disabled={isSaving}
+            >
+              <IoCloseCircleOutline className={styles.buttonIcon} size={18} />
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className={styles.primaryButton}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <span
+                    className={styles.submitSpinner}
+                    aria-hidden="true"
+                  ></span>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <IoSaveOutline className={styles.buttonIcon} size={18} />
+                  Save Changes
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 };
 
 export default EditDepartment;

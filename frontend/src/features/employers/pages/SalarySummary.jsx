@@ -109,7 +109,7 @@ const SalarySummary = () => {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
-  
+ 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
   };
@@ -144,7 +144,7 @@ const SalarySummary = () => {
         "Additions Hours",
         "Deductions Hours",
         "Total Additions",
-        "Total Deductions",
+        "Deductions",
         "Absent Deduction",
         "Final Salary",
       ];
@@ -356,7 +356,7 @@ const SalarySummary = () => {
                             </div>
                             <div className="d-flex justify-content-between py-2 border-bottom">
                               <span className="text-muted">
-                                Total Deductions:
+                                 Deductions:
                               </span>
                               <span className="text-danger fw-semibold">
                                 -
@@ -500,7 +500,7 @@ const SalarySummary = () => {
                           <th className="text-center">Deduction Hours</th>
                           <th className="text-end">Additions</th>
                           <th className="text-end">Absent Deduction</th>
-                          <th className="text-end">Total Deductions</th>
+                          <th className="text-end"> Deductions</th>
                           <th className="text-end pe-4">Final Salary</th>
                         </tr>
                       </thead>

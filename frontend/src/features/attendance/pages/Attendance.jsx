@@ -247,51 +247,10 @@ const Attendance = () => {
       .catch((error) => message.error("Error deleting record"));
   };
 
-  const validateTimeRange = (_, value) => {
-    if (!value) return Promise.resolve();
-    const attendanceTime = form.getFieldValue("attendance_time");
-    if (!attendanceTime) return Promise.resolve();
+ 
+ 
 
-    if (value.isBefore(attendanceTime)) {
-      return Promise.reject("Leave time must be after attendance time");
-    }
-    return Promise.resolve();
-  };
 
-  const validateAttendanceTime = (_, value) => {
-    if (!value) return Promise.resolve();
-    const leaveTime = form.getFieldValue("leave_time");
-    if (!leaveTime) return Promise.resolve();
-
-    if (value.isAfter(leaveTime)) {
-      return Promise.reject("Attendance time must be before leave time");
-    }
-    return Promise.resolve();
-  };
-
-  const disabledHours = () => {
-    const hours = [];
-    for (let i = 0; i < 24; i++) {
-      if (i < 6 || i > 20) {
-        // تعطيل الساعات خارج ساعات العمل (6 صباحاً - 8 مساءً)
-        hours.push(i);
-      }
-    }
-    return hours;
-  };
-
-  const disabledMinutes = (selectedHour) => {
-    if (selectedHour === 6) {
-      return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; // تعطيل الدقائق الأولى في الساعة 6
-    }
-    if (selectedHour === 20) {
-      return [
-        30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
-        48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59,
-      ]; // تعطيل الدقائق الأخيرة في الساعة 20
-    }
-    return [];
-  };
 
   const columns = [
     {
@@ -356,12 +315,33 @@ const Attendance = () => {
 
   return (
     <div className={styles.container}>
-      <h2 className={styles.header}>
-        Attendance Management
-        <ClockCircleOutlined
-          style={{ color: "#1890ff", fontSize: "28px", margin: "10px" }}
-        />
-      </h2>
+      <div className={styles.header}>
+        <div className={styles.headerContent}>
+          <div className={styles.headerIconWrapper}>
+            <ClockCircleOutlined className={styles.headerIcon} />
+          </div>
+          <div>
+            <h1 className={styles.headerTitle}>Attendance Management</h1>
+            <p className={styles.headerSubtitle}>
+              <InfoCircleOutlined /> Manage employee attendance records and
+              track working hours
+            </p>
+          </div>
+        </div>
+        {/* <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => setIsAddModalVisible(true)}
+          style={{
+            background: "rgba(255, 255, 255, 0.2)",
+            border: "1px solid rgba(255, 255, 255, 0.3)",
+            backdropFilter: "blur(5px)",
+          }}
+        >
+          Add Attendance
+        </Button> */}
+      </div>
+
       <div className={styles.filters}>
         <div>
           <Input
@@ -396,14 +376,6 @@ const Attendance = () => {
             style={{ width: 300, marginBottom: 10 }}
             onChange={handleDateRangeChange}
           />
-          <Button
-            icon={<PlusOutlined />}
-            type="primary"
-            style={{ marginBottom: 10 }}
-            onClick={() => setIsAddModalVisible(true)}
-          >
-            Add Attendance
-          </Button>
         </div>
       </div>
       <div className={styles.tableContainer}>

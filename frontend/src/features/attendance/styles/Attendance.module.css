@@ -1,21 +1,67 @@
 .container {
-  padding: 20px;
-  background: #f0f2f5;
+  padding: 2rem;
+  background-color: #f5f7ff;
   min-height: 100vh;
 }
 
 .header {
-  color: #1890ff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 2rem;
+  border-radius: 15px;
+  margin-bottom: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.headerContent {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.headerIconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(5px);
+}
+
+.headerIcon {
+  color: var(--color-white);
   font-size: 24px;
-  margin-bottom: 20px;
+}
+
+.headerTitle {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 600;
+  font-family: "Poppins", sans-serif;
+}
+
+.headerSubtitle {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
+  opacity: 0.9;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .filters {
-  background: #fff;
-  padding: 16px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  margin-bottom: 20px;
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  margin-bottom: 2rem;
 }
 
 .filters > div {
@@ -26,36 +72,195 @@
 }
 
 .tableContainer {
-  background: #fff;
-  padding: 16px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
 }
 
-.previewTable {
-  margin-top: 20px;
+/* Table Styles */
+.tableContainer :global(.ant-table) {
+  background: transparent;
 }
 
-.ant-table {
-  border: 1px solid #f0f0f0;
+.tableContainer :global(.ant-table-thead > tr > th) {
+  background: #f8fafc;
+  color: #2d3748;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 2px solid #e2e8f0;
 }
 
-.ant-btn-primary {
-  background: #1890ff;
-  border-color: #1890ff;
+.tableContainer :global(.ant-table-tbody > tr > td) {
+  padding: 1rem 1.25rem;
+  color: #4a5568;
+  border-bottom: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
 }
 
-.ant-btn-primary:hover {
-  background: #40a9ff;
-  border-color: #40a9ff;
+.tableContainer :global(.ant-table-tbody > tr:hover > td) {
+  background: #f8fafc;
 }
 
-.ant-btn-danger {
-  background: #ff4d4f;
-  border-color: #ff4d4f;
+.tableContainer :global(.ant-table-tbody > tr:last-child > td) {
+  border-bottom: none;
 }
 
-.ant-btn-danger:hover {
-  background: #ff7875;
-  border-color: #ff7875;
+/* Status Badge Styles */
+.statusBadge {
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.statusPresent {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.statusLate {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.statusAbsent {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.statusHalfDay {
+  background: #e0e7ff;
+  color: #4f46e5;
+}
+
+/* Action Buttons */
+.actionButton {
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.editButton {
+  color: #4f46e5;
+  background: #eef2ff;
+  border-color: #e0e7ff;
+}
+
+.editButton:hover {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.deleteButton {
+  color: #dc2626;
+  background: #fef2f2;
+  border-color: #fee2e2;
+}
+
+.deleteButton:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* Empty State */
+.emptyState {
+  padding: 3rem 2rem;
+  text-align: center;
+  background: #f8fafc;
+  border-radius: 12px;
+  margin: 1rem 0;
+}
+
+.emptyIcon {
+  font-size: 3rem;
+  color: #cbd5e1;
+  margin-bottom: 1rem;
+}
+
+.emptyText {
+  color: #64748b;
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.emptySubtext {
+  color: #94a3b8;
+  font-size: 0.95rem;
+}
+
+/* Loading State */
+.loadingContainer {
+  padding: 2rem;
+  text-align: center;
+  background: #f8fafc;
+  border-radius: 12px;
+  margin: 1rem 0;
+}
+
+.loadingSpinner {
+  color: #4f46e5;
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.loadingText {
+  color: #64748b;
+  font-size: 1.1rem;
+}
+
+/* Responsive Table */
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+
+  .header {
+    padding: 1.5rem;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .headerTitle {
+    font-size: 1.5rem;
+  }
+
+  .headerSubtitle {
+    font-size: 0.9rem;
+  }
+
+  .filters {
+    padding: 1rem;
+  }
+
+  .tableContainer {
+    padding: 1rem;
+    overflow-x: auto;
+  }
+
+  .tableContainer :global(.ant-table-thead > tr > th),
+  .tableContainer :global(.ant-table-tbody > tr > td) {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .statusBadge {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  .actionButton {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.85rem;
+  }
 }

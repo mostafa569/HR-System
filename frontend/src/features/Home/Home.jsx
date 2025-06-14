@@ -161,9 +161,9 @@ export default function Home() {
                     }
                   >
                     {holiday.type === "weekly"
-                      ? "Weekly Holiday"
+                      ? ""
                       : holiday.name}
-                    {"   - Official -  "}-{" "}
+                    {" "}
                     {new Date(holiday.date).toLocaleDateString("en-GB")}
                     {holiday.day && ` (${holiday.day})`}
                   </ListGroup.Item>

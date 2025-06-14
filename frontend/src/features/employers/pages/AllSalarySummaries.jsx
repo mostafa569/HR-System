@@ -282,7 +282,7 @@ const AllSalarySummaries = () => {
                 <th>Absent</th>
                 <th>Absent Deduction</th>
                 <th>Additions</th>
-                <th>Total Deductions</th>
+                <th> Deductions</th>
                 <th>Final Salary</th>
               </tr>
             </thead>
@@ -339,7 +339,7 @@ const AllSalarySummaries = () => {
       "Additional Hours",
       "Deduction Hours",
       "Total Additions",
-      "Total Deductions",
+      " Deductions",
       "Final Salary",
     ];
 
@@ -588,7 +588,7 @@ const AllSalarySummaries = () => {
                           </div>
                           <div>
                             <small className="text-muted d-block">
-                              Total Deductions
+                               Deductions
                             </small>
                             <span className="fw-semibold">
                               {calculateTotal(
@@ -688,7 +688,7 @@ const AllSalarySummaries = () => {
                           <th className="text-center">Absent</th>
                           <th className="text-end">Absent Deduction</th>
                           <th className="text-end">Additions</th>
-                          <th className="text-end">Total Deductions</th>
+                          <th className="text-end"> Deductions</th>
                           <th className="text-end pe-4">Final Salary</th>
                         </tr>
                       </thead>

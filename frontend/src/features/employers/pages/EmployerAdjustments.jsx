@@ -272,7 +272,7 @@ const EmployerAdjustments = () => {
                       <div className={styles.infoItem}>
                         <span className={styles.infoLabel}>Base Salary</span>
                         <span className={styles.infoValue}>
-                          $
+                          
                           {employers.find(
                             (emp) => emp.id === parseInt(employerId)
                           )?.salary || 0}
@@ -338,8 +338,8 @@ const EmployerAdjustments = () => {
 
                       <Form.Group className={styles.formGroup}>
                         <Form.Label>
-                          <FaClock className="me-2" /> Value (
-                          {form.value_type === "hours" ? "hours" : "$"})
+                          <FaClock className="me-2" /> Value 
+                          {form.value_type === "hours" ? " (hours)" : " (money)"}
                         </Form.Label>
                         <Form.Control
                           type="number"
@@ -436,7 +436,7 @@ const EmployerAdjustments = () => {
                                   <td>
                                     {adjustment.value_type === "hours"
                                       ? `${Math.abs(adjustment.value)} hours`
-                                      : `$${Math.abs(adjustment.value)}`}
+                                      : `${Math.abs(adjustment.value)}`}
                                   </td>
                                   <td>{adjustment.reason}</td>
                                   <td>
@@ -545,7 +545,7 @@ const EmployerAdjustments = () => {
                     <Form.Group className={styles.formGroup}>
                       <Form.Label>
                         <FaClock className="me-2" /> Value (
-                        {form.value_type === "hours" ? "hours" : "$"})
+                        {form.value_type === "hours" ? "hours" : ""})
                       </Form.Label>
                       <Form.Control
                         type="number"
