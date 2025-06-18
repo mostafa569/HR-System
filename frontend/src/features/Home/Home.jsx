@@ -9,6 +9,12 @@ import {
 } from "react-icons/fa";
 import "../../App.css";
 import axios from "axios";
+import askAI from '../../api/askAI'; 
+
+const handleClick = async () => {
+  const result = await askAI("Summarize today's attendance issues");
+  console.log(result);
+};
 
 export default function Home() {
   const { darkMode } = useOutletContext();
@@ -173,6 +179,7 @@ export default function Home() {
           </Card>
         </Col>
       </Row>
+      <button className="btn btn-success" onClick={handleClick}>hello</button>
     </div>
   );
 }

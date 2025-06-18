@@ -9,6 +9,7 @@ use App\Http\Controllers\Hr\HrController;
 use App\Http\Controllers\SalarySummary\SalarySummaryController;
 use App\Http\Controllers\Adjustment\AdjustmentController;
 use App\Http\Controllers\Attendance\AttendanceController;
+use App\Http\Controllers\AIController\AIController;
 // Public routes
 Route::post('/hr/login', [HrAuthController::class, 'login']);
 
@@ -55,3 +56,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Attendance Management
     Route::apiResource('attendances', AttendanceController::class);
     ;});
+
+// OpenAI API route
+Route::post('/ai/prompt', [AIController::class, 'ask']);
+
+Route::get('/test-openai', function () {
+    $service = new \App\Services\OpenAIService();
+    return $service->ask('Test prompt');
+});
