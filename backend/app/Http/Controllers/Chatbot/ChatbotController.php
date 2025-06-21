@@ -82,6 +82,9 @@ class ChatbotController extends Controller
              
             $readingTime = ceil($wordCount / 200);
             
+            // CV Rating Analysis
+            $cvRating = $this->analyzeCvContent($text, $fileName, $wordCount, $paragraphCount);
+            
             $summary = "📄  PDF Document Analysis: {$fileName} \n\n" .
                        "📊  Document Statistics: \n" .
                        "•  File Size:  " . number_format($fileSize / 1024, 2) . " KB\n" .
@@ -93,7 +96,8 @@ class ChatbotController extends Controller
                        "📖  Content Preview: \n" .
                        "```\n" .
                        $preview .
-                       "\n```\n\n" ;
+                       "\n```\n\n" .
+                       $cvRating;
                        
             return response()->json([
                 'success' => true,
@@ -106,6 +110,262 @@ class ChatbotController extends Controller
                 'response' => "❌  Error processing PDF:  " . $e->getMessage() . "\n\nPlease ensure the PDF file is not corrupted or password-protected."
             ]);
         }
+    }
+
+    private function analyzeCvContent($text, $fileName, $wordCount, $paragraphCount)
+    {
+        $text = strtolower($text);
+        $score = 0;
+        $maxScore = 100;
+        $feedback = [];
+        
+        // Check if it's likely a CV/Resume
+        $cvKeywords = ['resume', 'cv', 'curriculum vitae', 'experience', 'education', 'skills', 'work history', 'employment'];
+        $isCv = false;
+        foreach ($cvKeywords as $keyword) {
+            if (str_contains($text, $keyword)) {
+                $isCv = true;
+                break;
+            }
+        }
+        
+        if (!$isCv) {
+            return "📋  Document Type: General PDF Document\n" .
+                   "This appears to be a general document, not specifically a CV/Resume.\n\n";
+        }
+        
+        // 1. Contact Information (15 points)
+        $contactScore = 0;
+        $contactInfo = [];
+        
+        // Email check
+        if (preg_match('/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/', $text)) {
+            $contactScore += 5;
+            $contactInfo[] = "✅ Email address found";
+        } else {
+            $contactInfo[] = "❌ No email address found";
+        }
+        
+        // Phone check
+        if (preg_match('/(\+\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/', $text)) {
+            $contactScore += 5;
+            $contactInfo[] = "✅ Phone number found";
+        } else {
+            $contactInfo[] = "❌ No phone number found";
+        }
+        
+        // Address check
+        if (preg_match('/(street|avenue|road|drive|lane|boulevard|city|state|zip|postal)/', $text)) {
+            $contactScore += 5;
+            $contactInfo[] = "✅ Address information found";
+        } else {
+            $contactInfo[] = "❌ No address information found";
+        }
+        
+        $score += $contactScore;
+        $feedback[] = "📞 Contact Information: {$contactScore}/15 points\n" . implode("\n", $contactInfo);
+        
+        // 2. Education Section (20 points)
+        $educationScore = 0;
+        $educationInfo = [];
+        
+        $educationKeywords = ['education', 'degree', 'bachelor', 'master', 'phd', 'university', 'college', 'school', 'graduation'];
+        $educationFound = false;
+        foreach ($educationKeywords as $keyword) {
+            if (str_contains($text, $keyword)) {
+                $educationFound = true;
+                break;
+            }
+        }
+        
+        if ($educationFound) {
+            $educationScore += 15;
+            $educationInfo[] = "✅ Education section found";
+        } else {
+            $educationInfo[] = "❌ No education section found";
+        }
+        
+        // Check for degree types
+        $degreeTypes = ['bachelor', 'master', 'phd', 'associate', 'diploma'];
+        $degreeCount = 0;
+        foreach ($degreeTypes as $degree) {
+            if (str_contains($text, $degree)) {
+                $degreeCount++;
+            }
+        }
+        
+        if ($degreeCount > 0) {
+            $educationScore += min(5, $degreeCount);
+            $educationInfo[] = "✅ Found {$degreeCount} degree(s) mentioned";
+        }
+        
+        $score += $educationScore;
+        $feedback[] = "🎓 Education: {$educationScore}/20 points\n" . implode("\n", $educationInfo);
+        
+        // 3. Work Experience (25 points)
+        $experienceScore = 0;
+        $experienceInfo = [];
+        
+        $experienceKeywords = ['experience', 'work history', 'employment', 'job', 'position', 'role', 'responsibilities'];
+        $experienceFound = false;
+        foreach ($experienceKeywords as $keyword) {
+            if (str_contains($text, $keyword)) {
+                $experienceFound = true;
+                break;
+            }
+        }
+        
+        if ($experienceFound) {
+            $experienceScore += 15;
+            $experienceInfo[] = "✅ Work experience section found";
+        } else {
+            $experienceInfo[] = "❌ No work experience section found";
+        }
+        
+        // Check for job titles
+        $jobTitles = ['manager', 'director', 'supervisor', 'coordinator', 'specialist', 'analyst', 'developer', 'engineer'];
+        $jobTitleCount = 0;
+        foreach ($jobTitles as $title) {
+            if (str_contains($text, $title)) {
+                $jobTitleCount++;
+            }
+        }
+        
+        if ($jobTitleCount > 0) {
+            $experienceScore += min(10, $jobTitleCount * 2);
+            $experienceInfo[] = "✅ Found {$jobTitleCount} job title(s)";
+        }
+        
+        $score += $experienceScore;
+        $feedback[] = "💼 Work Experience: {$experienceScore}/25 points\n" . implode("\n", $experienceInfo);
+        
+        // 4. Skills Section (20 points)
+        $skillsScore = 0;
+        $skillsInfo = [];
+        
+        if (str_contains($text, 'skills') || str_contains($text, 'competencies') || str_contains($text, 'abilities')) {
+            $skillsScore += 10;
+            $skillsInfo[] = "✅ Skills section found";
+        } else {
+            $skillsInfo[] = "❌ No skills section found";
+        }
+        
+        // Count technical skills
+        $technicalSkills = ['programming', 'software', 'technology', 'computer', 'database', 'web', 'mobile', 'cloud', 'ai', 'machine learning'];
+        $techSkillCount = 0;
+        foreach ($technicalSkills as $skill) {
+            if (str_contains($text, $skill)) {
+                $techSkillCount++;
+            }
+        }
+        
+        if ($techSkillCount > 0) {
+            $skillsScore += min(10, $techSkillCount * 2);
+            $skillsInfo[] = "✅ Found {$techSkillCount} technical skill(s)";
+        }
+        
+        $score += $skillsScore;
+        $feedback[] = "🔧 Skills: {$skillsScore}/20 points\n" . implode("\n", $skillsInfo);
+        
+        // 5. Professional Summary/Objective (10 points)
+        $summaryScore = 0;
+        $summaryInfo = [];
+        
+        $summaryKeywords = ['summary', 'objective', 'profile', 'overview', 'introduction'];
+        $summaryFound = false;
+        foreach ($summaryKeywords as $keyword) {
+            if (str_contains($text, $keyword)) {
+                $summaryFound = true;
+                break;
+            }
+        }
+        
+        if ($summaryFound) {
+            $summaryScore += 10;
+            $summaryInfo[] = "✅ Professional summary/objective found";
+        } else {
+            $summaryInfo[] = "❌ No professional summary/objective found";
+        }
+        
+        $score += $summaryScore;
+        $feedback[] = "📝 Professional Summary: {$summaryScore}/10 points\n" . implode("\n", $summaryInfo);
+        
+        // 6. Document Length and Structure (10 points)
+        $structureScore = 0;
+        $structureInfo = [];
+        
+        // Check document length
+        if ($wordCount >= 200 && $wordCount <= 1000) {
+            $structureScore += 5;
+            $structureInfo[] = "✅ Appropriate document length ({$wordCount} words)";
+        } else {
+            $structureInfo[] = "⚠️ Document length may need adjustment ({$wordCount} words)";
+        }
+        
+        // Check for proper structure
+        if ($paragraphCount >= 5) {
+            $structureScore += 5;
+            $structureInfo[] = "✅ Good document structure ({$paragraphCount} paragraphs)";
+        } else {
+            $structureInfo[] = "⚠️ Document structure could be improved";
+        }
+        
+        $score += $structureScore;
+        $feedback[] = "📋 Document Structure: {$structureScore}/10 points\n" . implode("\n", $structureInfo);
+        
+        // Calculate overall rating
+        $percentage = round(($score / $maxScore) * 100);
+        $rating = $this->getRatingLevel($percentage);
+        
+        return "📋  CV/Resume Analysis & Rating\n\n" .
+               "⭐ Overall Rating: {$rating} ({$percentage}%)\n" .
+               "📊 Total Score: {$score}/{$maxScore} points\n\n" .
+               "📋 Detailed Feedback:\n" .
+               implode("\n\n", $feedback) . "\n\n" .
+               "💡 Recommendations:\n" .
+               $this->getRecommendations($score, $maxScore);
+    }
+    
+    private function getRatingLevel($percentage)
+    {
+        if ($percentage >= 90) return "🌟 Excellent";
+        if ($percentage >= 80) return "⭐ Very Good";
+        if ($percentage >= 70) return "👍 Good";
+        if ($percentage >= 60) return "✅ Fair";
+        if ($percentage >= 50) return "⚠️ Needs Improvement";
+        return "❌ Poor";
+    }
+    
+    private function getRecommendations($score, $maxScore)
+    {
+        $percentage = round(($score / $maxScore) * 100);
+        $recommendations = [];
+        
+        if ($percentage < 80) {
+            $recommendations[] = "• Add missing contact information (email, phone, address)";
+        }
+        
+        if ($percentage < 70) {
+            $recommendations[] = "• Include a clear education section with degree details";
+        }
+        
+        if ($percentage < 75) {
+            $recommendations[] = "• Expand work experience section with specific job titles and responsibilities";
+        }
+        
+        if ($percentage < 70) {
+            $recommendations[] = "• Add a comprehensive skills section";
+        }
+        
+        if ($percentage < 60) {
+            $recommendations[] = "• Include a professional summary or objective statement";
+        }
+        
+        if (empty($recommendations)) {
+            $recommendations[] = "• Great job! Your CV is well-structured and comprehensive";
+        }
+        
+        return implode("\n", $recommendations);
     }
 
   
