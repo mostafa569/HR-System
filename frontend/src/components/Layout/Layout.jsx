@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Sidebar from "../Sidebar/Sidebar";
 import Navbar from "../Navbar/Navbar";
+import FloatingChatbot from "../FloatingChatbot/FloatingChatbot";
 import { Outlet, useLocation } from "react-router-dom";
 import "./Layout.module.css";
 
@@ -48,6 +49,7 @@ export default function Layout() {
       >
         <Outlet context={{ darkMode }} />
       </main>
+      <FloatingChatbot />
     </div>
   );
 }

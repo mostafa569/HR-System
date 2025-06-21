@@ -13,6 +13,8 @@ import {
   FaMoneyCheckAlt,
   FaCog,
   FaSignOutAlt,
+  FaRobot,
+  FaChartBar,
 } from "react-icons/fa";
 
 export default function Sidebar({ sidebarOpen, darkMode }) {
@@ -135,6 +137,11 @@ export default function Sidebar({ sidebarOpen, darkMode }) {
             <FaMoneyCheckAlt className="me-3" style={{ fontSize: "1.5rem" }} />{" "}
             Summary Salary
           </NavLink>
+
+        
+
+          
+
           {/* <NavLink
             to="/employers/adjustments"
             className={({ isActive }) =>

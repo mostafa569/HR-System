@@ -9,6 +9,8 @@ use App\Http\Controllers\Hr\HrController;
 use App\Http\Controllers\SalarySummary\SalarySummaryController;
 use App\Http\Controllers\Adjustment\AdjustmentController;
 use App\Http\Controllers\Attendance\AttendanceController;
+use App\Http\Controllers\Chatbot\ChatbotController;
+
 // Public routes
 Route::post('/hr/login', [HrAuthController::class, 'login']);
 
@@ -54,4 +56,10 @@ Route::middleware('auth:sanctum')->group(function () {
    
     // Attendance Management
     Route::apiResource('attendances', AttendanceController::class);
-    ;});
+
+    // Chatbot Routes
+    Route::prefix('chatbot')->group(function () {
+        Route::post('/chat', [ChatbotController::class, 'chat']);
+        Route::post('/upload-pdf', [ChatbotController::class, 'uploadPdf']);
+    });
+});

@@ -5,7 +5,7 @@ import Home from "./features/Home/Home";
 import Login from "./features/auth/pages/Login";
 import SuperAdminControl from "./features/admin/SuperAdminControl.jsx";
 import HRControl from "./features/admin/HRControl.jsx";
-import AddUser from './features/admin/AddUser.jsx'
+import AddUser from "./features/admin/AddUser.jsx";
 import EditUser from "./features/admin/EditUser.jsx";
 import HolidayList from "./features/Holidays/HolidayList.jsx";
 import EmployerList from "./features/employers/pages/EmployerList";
@@ -23,6 +23,8 @@ import DepartmentList from "./features/departments/pages/DepartmentList";
 import CreateDepartment from "./features/departments/pages/CreateDepartment";
 import EditDepartment from "./features/departments/pages/EditDepartment";
 import Attendance from "./features/attendance/pages/Attendance.jsx";
+import Chatbot from "./features/chatbot/Chatbot.jsx";
+
 function App() {
   return (
     <BrowserRouter>
@@ -45,7 +47,7 @@ function App() {
             path="/employers/:id/adjustments"
             element={<EmployerAdjustments />}
           />
-            <Route path="/attendance" element={<Attendance />} />
+          <Route path="/attendance" element={<Attendance />} />
           <Route
             path="/employers/:id/salary-summary"
             element={<SalarySummary />}
@@ -54,13 +56,14 @@ function App() {
             path="/employers/salary-summaries"
             element={<AllSalarySummaries />}
           />
-            <Route path="/super-admin-control" element={<SuperAdminControl />} />
-            <Route path="/hr-control" element={<HRControl />} />
-        <Route path="/add-user" element={<AddUser />} />
-        <Route path="/edit-user/:id" element={<EditUser />} />
-        <Route path="/departments" element={<DepartmentList />} />
-        <Route path="/departments/create" element={<CreateDepartment />} /> 
+          <Route path="/super-admin-control" element={<SuperAdminControl />} />
+          <Route path="/hr-control" element={<HRControl />} />
+          <Route path="/add-user" element={<AddUser />} />
+          <Route path="/edit-user/:id" element={<EditUser />} />
+          <Route path="/departments" element={<DepartmentList />} />
+          <Route path="/departments/create" element={<CreateDepartment />} />
           <Route path="/departments/:id/edit" element={<EditDepartment />} />
+          <Route path="/chatbot" element={<Chatbot />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />
         {/* <Route path="/admin" element={<AdminRedirect />} /> */}
