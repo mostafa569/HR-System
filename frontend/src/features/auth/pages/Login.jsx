@@ -3,16 +3,12 @@ import styles from "../styles/Login.module.css";
 import { useNavigate, useLocation } from "react-router-dom";
 import { loginUser } from "../services/authService";
 import { toast } from "react-toastify";
-
+import loginImage from "../../../assets/teamwork.png"; 
+import logoimg from "../../../assets/hrlogo.png"
 const Login = () => {
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
-
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
-  //   const [msgError, setMsgError] = useState('');
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
   const navigate = useNavigate();
@@ -25,13 +21,11 @@ const Login = () => {
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Email is not valid";
     }
-
     if (!formData.password) {
       newErrors.password = "Password is required";
     } else if (!/^\w{6,}$/.test(formData.password)) {
       newErrors.password = "Password must be at least 6 characters";
     }
-
     return newErrors;
   };
 
@@ -39,18 +33,14 @@ const Login = () => {
     e.preventDefault();
     const validationErrors = validate();
     setErrors(validationErrors);
-
     if (Object.keys(validationErrors).length === 0) {
       setIsLoading(true);
       try {
         const res = await loginUser(formData);
-        // console.log("Login Response:", res);
         if (res.message === "Logged in successfully") {
           toast.success("Logged in successfully");
           localStorage.setItem("userToken", res.token);
-          localStorage.setItem("userData", JSON.stringify(res.user)); 
-
-          // Get the redirect path from location state or default to home
+          localStorage.setItem("userData", JSON.stringify(res.user));
           const from = location.state?.from?.pathname || "/";
           navigate(from, { replace: true });
         }
@@ -59,8 +49,6 @@ const Login = () => {
         toast.error(err.response?.data?.message || "Login failed");
         setMessage(err.response?.data?.message || "Login failed");
         setMessageType("error");
-
-        // setMsgError(err.response?.data?.message || 'Login failed');
       } finally {
         setIsLoading(false);
       }
@@ -70,61 +58,57 @@ const Login = () => {
   return (
     <section className={styles.loginSection}>
       <div className={styles.sectionLayer}>
-        <div className="container">
-          <h1>Login Now</h1>
-          <form onSubmit={handleSubmit}>
-            <div className="my-4 form-group">
-              <label htmlFor="email">Email</label>
-              <input
-                id="email"
-                type="email"
-                className="form-control p-2"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-              />
-              {errors.email && (
-                <div className="alert alert-danger">{errors.email}</div>
-              )}
-            </div>
-
-            <div className="my-4 form-group">
-              <label htmlFor="password">Password</label>
-              <input
-                id="password"
-                type="password"
-                className="form-control p-2"
-                value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
-              />
-              {errors.password && (
-                <div className="alert alert-danger">{errors.password}</div>
-              )}
-            </div>
-
-            <button type="submit" disabled={isLoading}>
-              Login{" "}
-              {isLoading && (
-                <span>
-                  <i className="fas fa-spin fa-spinner"></i>
-                </span>
-              )}
-            </button>
-            {/* {message && (
-                            <p className={`alert alert-${messageType === 'success' ? 'success' : 'danger'}  fade-in m-0`}>
-                               {message}
-                            </p>
-                        )} */}
-
-            {/* {msgError && <p className="alert alert-danger w-100 m-0">{msgError}</p>} */}
-          </form>
+        <div className={styles.imageContainer}>
+          <img src={loginImage} alt="Login Visual" />
         </div>
+       <form onSubmit={handleSubmit} className="text-center">
+            <img className={styles.hrlogo} src={logoimg} alt="" />
+           <h1>Login Now</h1>
+
+        <div className={styles.inputGroup}>
+          <i className="fas fa-envelope"></i>
+          <input
+            id="email"
+            type="email"
+            placeholder="Email"
+            value={formData.email}
+            onChange={(e) =>
+              setFormData({ ...formData, email: e.target.value })
+            }
+          />
+        </div>
+        {errors.email && (
+          <div className="alert alert-danger">{errors.email}</div>
+        )}
+
+        <div className={styles.inputGroup}>
+          <i className="fas fa-lock"></i>
+          <input
+            id="password"
+            type="password"
+            placeholder="Password"
+            value={formData.password}
+            onChange={(e) =>
+              setFormData({ ...formData, password: e.target.value })
+            }
+          />
+        </div>
+          {errors.password && (
+            <div className="alert alert-danger">{errors.password}</div>
+          )}
+
+          <button type="submit" disabled={isLoading}>
+            Login{" "}
+            {isLoading && (
+              <span>
+                <i className="fas fa-spin fa-spinner"></i>
+              </span>
+            )}
+          </button>
+          </form>
+
       </div>
     </section>
-    // </section>
   );
 };
 
