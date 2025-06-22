@@ -17,6 +17,7 @@
     "bootstrap": "^5.3.6",
     "classnames": "^2.5.1",
     "date-fns": "^4.1.0",
+    "i18n-react": "^0.7.0",
     "lucide-react": "^0.513.0",
     "moment": "^2.30.1",
     "react": "^19.1.0",
