@@ -8,6 +8,11 @@ export const loginUser = async (data) => {
   return res.data;
 };
 
+export const logoutUser = async () => {
+  const res = await api.post("/hr/logout");
+  return res.data;
+};
+
 export const authService = {
   apiCall: async (endpoint, options = {}) => {
     try {

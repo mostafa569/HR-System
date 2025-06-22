@@ -10,7 +10,7 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('userToken'); // هذا هو المفتاح الذي حفظتِ به التوكن
+    const token = localStorage.getItem('userToken'); 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

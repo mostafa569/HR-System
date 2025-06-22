@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import styles from "./Sidebar.module.css";
 import { Nav } from "react-bootstrap";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import { logoutUser } from "../../features/auth/services/authService";
+import { toast } from "react-toastify";
 
 import {
   FaHome,
@@ -33,11 +35,19 @@ export default function Sidebar({ sidebarOpen, darkMode }) {
 
   const shouldShowSidebar = isLargeScreen || sidebarOpen;
 
-  const handleLogout = (e) => {
+  const handleLogout = async (e) => {
     e.preventDefault();
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/login", { replace: true });
+    try {
+      await logoutUser();
+      toast.success("Logged out successfully");
+    } catch (error) {
+      console.error("Logout error", error);
+      toast.error("Logout failed on the server.");
+    } finally {
+      localStorage.removeItem("userToken");
+      localStorage.removeItem("userData");
+      navigate("/login", { replace: true });
+    }
   };
 
   const isActive = (path) => {
@@ -137,10 +147,6 @@ export default function Sidebar({ sidebarOpen, darkMode }) {
             <FaMoneyCheckAlt className="me-3" style={{ fontSize: "1.5rem" }} />{" "}
             Summary Salary
           </NavLink>
-
-        
-
-          
 
           {/* <NavLink
             to="/employers/adjustments"
