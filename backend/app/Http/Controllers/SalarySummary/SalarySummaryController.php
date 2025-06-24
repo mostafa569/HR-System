@@ -67,7 +67,11 @@ class SalarySummaryController extends Controller
 
 
             $summaries->transform(function ($summary) {
-                $summary->final_salary = max(0, $summary->base_salary + $summary->total_additions - $summary->total_all_deductions);
+                if (isset($summary->attendance_days) && $summary->attendance_days == 0) {
+                    $summary->final_salary = 0;
+                } else {
+                    $summary->final_salary = max(0, $summary->base_salary + $summary->total_additions - $summary->total_all_deductions);
+                }
                 return $summary;
             });
 
@@ -175,15 +179,17 @@ class SalarySummaryController extends Controller
                 $dailySalary = $employer->salary / 30;
                 $summary->absent_deduction = round($summary->absent_days * $dailySalary, 2);
 
-
                 $summary->total_additions = floatval($summary->total_additions ?? 0);
                 $summary->total_deductions = floatval($summary->total_deductions ?? 0);
                 $summary->additions_hours = floatval($summary->additions_hours ?? 0);
                 $summary->deductions_hours = floatval($summary->deductions_hours ?? 0);
 
                 $totalDeductions = $summary->total_deductions + $summary->absent_deduction;
-                $summary->final_salary = max(0, $employer->salary + $summary->total_additions - $totalDeductions);
-
+                if (isset($summary->attendance_days) && $summary->attendance_days == 0) {
+                    $summary->final_salary = 0;
+                } else {
+                    $summary->final_salary = max(0, $employer->salary + $summary->total_additions - $totalDeductions);
+                }
                 return $summary;
             });
 

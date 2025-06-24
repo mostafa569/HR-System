@@ -249,7 +249,7 @@ class EmployerController extends Controller
             } elseif ($recordedTime->lt($scheduledTime)) {
               
                 $minutesEarly = $scheduledTime->diffInMinutes($recordedTime);
-                $hours = round($minutesEarly / 60, 2);
+                $hours = abs(round($minutesEarly / 60, 2));
                 Adjustment::create([
                     'employer_id' => $id,
                     'date' => $today,
@@ -311,7 +311,7 @@ class EmployerController extends Controller
             if ($recordedLeave->gt($scheduledLeave)) {
               
                 $minutesLate = $recordedLeave->diffInMinutes($scheduledLeave);
-                $hours = round($minutesLate / 60, 2);
+                $hours = abs(round($minutesLate / 60, 2));
                 Adjustment::create([
                     'employer_id' => $id,
                     'date' => $today,

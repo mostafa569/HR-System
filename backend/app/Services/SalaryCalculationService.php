@@ -38,8 +38,7 @@ class SalaryCalculationService
             $adjustments = $this->getAdjustments($employerId, $dateRange);
             $adjustmentCalculations = $this->calculateAdjustments($adjustments, $hourlyRate);
 
-            $salaryCalculations = $this->calculateFinalSalary($baseSalary, $daysInMonth, $absentDays, $adjustmentCalculations);
-
+            $salaryCalculations = $this->calculateFinalSalary($baseSalary, $daysInMonth, $absentDays, $adjustmentCalculations, $attendanceDays);
             $data = [
                 'attendance_days' => $attendanceDays,
                 'absent_days' => $absentDays,
@@ -175,13 +174,22 @@ class SalaryCalculationService
         return $baseSalary / ($daysInMonth * $workingHoursPerDay);
     }
 
-    protected function calculateFinalSalary($baseSalary, $daysInMonth, $absentDays, $adjustmentCalculations)
+    protected function calculateFinalSalary($baseSalary, $daysInMonth, $absentDays, $adjustmentCalculations, $attendanceDays)
     {
+        // If attendance days is 0, set final salary to 0
+        if ($attendanceDays == 0) {
+            return [
+                'base_salary' => round($baseSalary, 2),
+                'absent_deduction' => round($baseSalary, 2), // Deduct the full salary
+                'final_salary' => 0
+            ];
+        }
+    
         $dailySalary = $baseSalary / $daysInMonth;
         $absentDeduction = $absentDays * $dailySalary;
         
         $finalSalary = max(0, $baseSalary - $absentDeduction + $adjustmentCalculations['total_additions'] - $adjustmentCalculations['total_deductions']);
-
+    
         return [
             'base_salary' => round($baseSalary, 2),
             'absent_deduction' => round($absentDeduction, 2),
