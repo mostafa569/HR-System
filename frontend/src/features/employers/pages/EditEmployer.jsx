@@ -1076,7 +1076,7 @@ const EditEmployer = () => {
                       <span className="input-group-text">
                         <FaClock />
                       </span>
-                      <input
+                     <input
                         type="time"
                         className={`form-control ${
                           errors.leave_time ? "is-invalid" : ""
