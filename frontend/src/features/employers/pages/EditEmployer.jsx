@@ -129,7 +129,6 @@ const EditEmployer = () => {
         "Name must contain only English letters without numbers or special characters";
     }
 
-    
     if (!formData.gender) {
       newErrors.gender = "Gender is required";
     }
@@ -148,7 +147,6 @@ const EditEmployer = () => {
       }
     }
 
-    
     if (!formData.national_id) {
       newErrors.national_id = "National ID is required";
     } else if (!/^[0-9]+$/.test(formData.national_id)) {
@@ -160,7 +158,6 @@ const EditEmployer = () => {
       newErrors.national_id = "National ID must be between 5 and 20 digits";
     }
 
-  
     if (!formData.phone) {
       newErrors.phone = "Phone number is required";
     } else if (!/^01[0125][0-9]{8}$/.test(formData.phone)) {
@@ -168,7 +165,6 @@ const EditEmployer = () => {
         "Invalid phone number. Must start with 01 followed by 0, 1, 2, or 5 and then 8 digits";
     }
 
-  
     if (!formData.address) newErrors.address = "Address is required";
     if (!formData.department_id)
       newErrors.department_id = "Department is required";
@@ -223,14 +219,12 @@ const EditEmployer = () => {
         const validationErrors = error.response?.data?.errors;
 
         if (validationErrors) {
-          
           const formattedErrors = {};
           Object.keys(validationErrors).forEach((key) => {
             formattedErrors[key] = validationErrors[key][0];
           });
           setErrors(formattedErrors);
 
-          
           const errorField = Object.keys(validationErrors)[0];
           if (
             ["full_name", "gender", "nationality", "dob"].includes(errorField)
@@ -252,7 +246,6 @@ const EditEmployer = () => {
         setIsLoading(false);
       }
     } else {
-      
       if (
         validationErrors.full_name ||
         validationErrors.gender ||
@@ -1089,6 +1082,7 @@ const EditEmployer = () => {
                           errors.leave_time ? "is-invalid" : ""
                         }`}
                         id="leave_time"
+                        name="leave_time" 
                         value={formData.leave_time}
                         onChange={handleChange}
                       />

@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\Employer;
 use App\Models\Department;
+use App\Models\Holiday;
+use App\Models\Adjustment;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
  
@@ -92,6 +94,170 @@ class AttendanceController extends Controller
 
 return response()->json(['message' => 'Attendance record added successfully', 'data' => $attendance], 201);    }
 
+    public function attendEmployer(Request $request, $id)
+    {
+        $employer = Employer::find($id);
+        if (!$employer) {
+            return response()->json(['message' => 'Employer not found'], 404);
+        }
+    
+        $today = Carbon::today('Africa/Cairo');
+    
+         
+        $holiday = Holiday::where('date', $today)->first();
+        if ($holiday) {
+            return response()->json([
+                'message' => 'Cannot mark attendance on a holiday',
+                'holiday_name' => $holiday->name,
+                'holiday_type' => $holiday->type
+            ], 400);
+        }
+    
+         
+        $attendance = Attendance::where('employer_id', $id)
+            ->whereDate('date', $today)
+            ->first();
+    
+        if ($attendance && $attendance->leave_time) {
+            return response()->json(['message' => 'Cannot mark attendance after leave time'], 400);
+        }
+    
+        if ($attendance && $attendance->attendance_time) {
+            return response()->json(['message' => 'Attendance already marked'], 400);
+        }
+    
+        if (!$attendance) {
+            $attendance = new Attendance();
+            $attendance->employer_id = $id;
+            $attendance->department_id = $employer->department_id;
+            $attendance->date = $today;
+        }
+    
+        $now = Carbon::now('Africa/Cairo');
+        $scheduledLeaveTime = Carbon::createFromTimeString($employer->leave_time, 'Africa/Cairo');
+    
+        if ($now->greaterThan($scheduledLeaveTime)) {
+            return response()->json(['message' => 'Cannot mark attendance after scheduled leave time'], 400);
+        }
+    
+        $attendance->attendance_time = $now->format('H:i');
+        $attendance->save();
+    
+        $adjustmentMessage = '';
+        if ($request->input('apply_adjustment', true)) {
+            $recordedTime = Carbon::createFromTimeString($attendance->attendance_time, 'Africa/Cairo');
+            $scheduledTime = Carbon::createFromTimeString($employer->attendance_time, 'Africa/Cairo');
+    
+            if ($recordedTime->gt($scheduledTime)) {
+                
+                $minutesLate = $recordedTime->diffInMinutes($scheduledTime);
+                $hours = abs(round($minutesLate / 60, 2));
+                Adjustment::create([
+                    'employer_id' => $id,
+                    'date' => $today,
+                    'value' => $hours,
+                    'value_type' => 'hours',
+                    'kind' => 'deduction',
+                    'reason' => 'Late arrival'
+                ]);
+                $adjustmentMessage = "Deducted {$hours} hours for late arrival";
+            } elseif ($recordedTime->lt($scheduledTime)) {
+              
+                $minutesEarly = $scheduledTime->diffInMinutes($recordedTime);
+                $hours = abs(round($minutesEarly / 60, 2));
+                Adjustment::create([
+                    'employer_id' => $id,
+                    'date' => $today,
+                    'value' => $hours,
+                    'value_type' => 'hours',
+                    'kind' => 'addition',
+                    'reason' => 'Early arrival overtime'
+                ]);
+                $adjustmentMessage = "Added {$hours} hours for early arrival";
+            }
+        }
+    
+        return response()->json([
+            'message' => 'Attendance recorded. '.$adjustmentMessage,
+            'data' => $attendance
+        ]);
+    }
+    
+    public function leaveEmployer(Request $request, $id)
+    {
+        $employer = Employer::find($id);
+        if (!$employer) {
+            return response()->json(['message' => 'Employer not found'], 404);
+        }
+    
+        $today = Carbon::today('Africa/Cairo');
+    
+        
+        $holiday = Holiday::where('date', $today)->first();
+        if ($holiday) {
+            return response()->json([
+                'message' => 'Cannot mark leave on a holiday',
+                'holiday_name' => $holiday->name,
+                'holiday_type' => $holiday->type
+            ], 400);
+        }
+    
+        $attendance = Attendance::where('employer_id', $id)
+            ->whereDate('date', $today)
+            ->first();
+    
+        if (!$attendance || !$attendance->attendance_time) {
+            return response()->json(['message' => 'Attendance not marked yet'], 400);
+        }
+    
+        if ($attendance->leave_time) {
+            return response()->json(['message' => 'Leave already marked'], 400);
+        }
+    
+        $now = Carbon::now('Africa/Cairo');
+        $attendance->leave_time = $now->format('H:i');
+        $attendance->save();
+    
+        $adjustmentMessage = '';
+        if ($request->input('apply_adjustment', true)) {
+            $recordedLeave = Carbon::createFromTimeString($attendance->leave_time, 'Africa/Cairo');
+            $scheduledLeave = Carbon::createFromTimeString($employer->leave_time, 'Africa/Cairo');
+    
+            if ($recordedLeave->gt($scheduledLeave)) {
+              
+                $minutesLate = $recordedLeave->diffInMinutes($scheduledLeave);
+                $hours = abs(round($minutesLate / 60, 2));
+                Adjustment::create([
+                    'employer_id' => $id,
+                    'date' => $today,
+                    'value' => $hours,
+                    'value_type' => 'hours',
+                    'kind' => 'addition',
+                    'reason' => 'Overtime work'
+                ]);
+                $adjustmentMessage = "Added {$hours} hours for overtime";
+            } elseif ($recordedLeave->lt($scheduledLeave)) {
+              
+                $minutesEarly = $scheduledLeave->diffInMinutes($recordedLeave);
+                $hours = abs(round($minutesEarly / 60, 2));
+                Adjustment::create([
+                    'employer_id' => $id,
+                    'date' => $today,
+                    'value' => $hours,  
+                    'value_type' => 'hours',
+                    'kind' => 'deduction',
+                    'reason' => 'Early departure'
+                ]);
+                $adjustmentMessage = "Deducted {$hours} hours for early leave";
+            }
+        }
+    
+        return response()->json([
+            'message' => 'Leave time recorded. '.$adjustmentMessage,
+            'data' => $attendance
+        ]);
+    }
+
   
     public function update(Request $request, $id)
     {
@@ -108,9 +274,115 @@ return response()->json(['message' => 'Attendance record added successfully', 'd
             'leave_time' => 'nullable|date_format:H:i',
         ]);
 
+       
+        if (isset($validated['date'])) {
+            $holiday = Holiday::where('date', $validated['date'])->first();
+            if ($holiday) {
+                return response()->json([
+                    'message' => 'Cannot update attendance on a holiday',
+                    'holiday_name' => $holiday->name,
+                    'holiday_type' => $holiday->type
+                ], 400);
+            }
+        }
+
+       
+        $oldAttendanceTime = $attendance->attendance_time;
+        $oldLeaveTime = $attendance->leave_time;
+        $oldDate = $attendance->date;
+
+        
         $attendance->update($validated);
 
-        return response()->json($attendance);
+        $adjustmentMessage = '';
+        $applyAdjustment = $request->input('apply_adjustment', true);
+
+        if ($applyAdjustment) {
+            $employer = Employer::find($attendance->employer_id);
+            
+           
+            if (isset($validated['attendance_time']) && $employer) {
+                $recordedTime = Carbon::createFromTimeString($validated['attendance_time'], 'Africa/Cairo');
+                $scheduledTime = Carbon::createFromTimeString($employer->attendance_time, 'Africa/Cairo');
+                $attendanceDate = isset($validated['date']) ? $validated['date'] : $oldDate;
+
+             
+                Adjustment::where('employer_id', $attendance->employer_id)
+                    ->where('date', $attendanceDate)
+                    ->whereIn('reason', ['Late arrival', 'Early arrival overtime'])
+                    ->delete();
+
+                if ($recordedTime->gt($scheduledTime)) {
+                    $minutesLate = $recordedTime->diffInMinutes($scheduledTime);
+                    $hours = abs(round($minutesLate / 60, 2));
+                    Adjustment::create([
+                        'employer_id' => $attendance->employer_id,
+                        'date' => $attendanceDate,
+                        'value' => $hours,
+                        'value_type' => 'hours',
+                        'kind' => 'deduction',
+                        'reason' => 'Late arrival'
+                    ]);
+                    $adjustmentMessage .= "Deducted {$hours} hours for late arrival. ";
+                } elseif ($recordedTime->lt($scheduledTime)) {
+                    $minutesEarly = $scheduledTime->diffInMinutes($recordedTime);
+                    $hours = abs(round($minutesEarly / 60, 2));
+                    Adjustment::create([
+                        'employer_id' => $attendance->employer_id,
+                        'date' => $attendanceDate,
+                        'value' => $hours,
+                        'value_type' => 'hours',
+                        'kind' => 'addition',
+                        'reason' => 'Early arrival overtime'
+                    ]);
+                    $adjustmentMessage .= "Added {$hours} hours for early arrival. ";
+                }
+            }
+
+          
+            if (isset($validated['leave_time']) && $employer) {
+                $recordedLeave = Carbon::createFromTimeString($validated['leave_time'], 'Africa/Cairo');
+                $scheduledLeave = Carbon::createFromTimeString($employer->leave_time, 'Africa/Cairo');
+                $attendanceDate = isset($validated['date']) ? $validated['date'] : $oldDate;
+
+          
+                Adjustment::where('employer_id', $attendance->employer_id)
+                    ->where('date', $attendanceDate)
+                    ->whereIn('reason', ['Overtime work', 'Early departure'])
+                    ->delete();
+
+                if ($recordedLeave->gt($scheduledLeave)) {
+                    $minutesLate = $recordedLeave->diffInMinutes($scheduledLeave);
+                    $hours = abs(round($minutesLate / 60, 2));
+                    Adjustment::create([
+                        'employer_id' => $attendance->employer_id,
+                        'date' => $attendanceDate,
+                        'value' => $hours,
+                        'value_type' => 'hours',
+                        'kind' => 'addition',
+                        'reason' => 'Overtime work'
+                    ]);
+                    $adjustmentMessage .= "Added {$hours} hours for overtime. ";
+                } elseif ($recordedLeave->lt($scheduledLeave)) {
+                    $minutesEarly = $scheduledLeave->diffInMinutes($recordedLeave);
+                    $hours = abs(round($minutesEarly / 60, 2));
+                    Adjustment::create([
+                        'employer_id' => $attendance->employer_id,
+                        'date' => $attendanceDate,
+                        'value' => $hours,
+                        'value_type' => 'hours',
+                        'kind' => 'deduction',
+                        'reason' => 'Early departure'
+                    ]);
+                    $adjustmentMessage .= "Deducted {$hours} hours for early leave. ";
+                }
+            }
+        }
+
+        return response()->json([
+            'message' => 'Attendance record updated successfully. ' . $adjustmentMessage,
+            'data' => $attendance
+        ]);
     }
 
     
