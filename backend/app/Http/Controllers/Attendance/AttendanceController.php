@@ -8,8 +8,7 @@ use App\Models\Employer;
 use App\Models\Department;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-// use Maatwebsite\Excel\Facades\Excel;
-// use App\Imports\AttendanceImport;
+ 
 
 class AttendanceController extends Controller
 {
@@ -18,19 +17,19 @@ class AttendanceController extends Controller
     {
         $query = Attendance::with(['employer', 'department']);
 
-        // Search by employee name
+        
         if ($request->has('employee_name') && !empty($request->input('employee_name'))) {
             $query->whereHas('employer', function ($q) use ($request) {
                 $q->where('full_name', 'like', "%{$request->input('employee_name')}%");
             });
         }
 
-        // Filter by department
+        
         if ($request->has('department_id') && !empty($request->input('department_id'))) {
             $query->where('department_id', $request->input('department_id'));
         }
 
-        // Filter by date or date range
+        
         if ($request->has('date') && !empty($request->input('date'))) {
             $query->whereDate('date', $request->input('date'));
         } elseif ($request->has('start_date') && $request->has('end_date')) {
@@ -40,7 +39,7 @@ class AttendanceController extends Controller
             ]);
         }
 
-        // Sorting
+        
         $sortBy = $request->input('sort_by', 'date');
         $sortDirection = $request->input('sort_direction', 'desc');
         $validSortFields = ['date', 'attendance_time', 'leave_time', 'employer_id'];

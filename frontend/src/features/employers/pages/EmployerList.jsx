@@ -30,6 +30,7 @@ import {
   FaSort,
   FaIdCard,
 } from "react-icons/fa";
+import ConfirmationModal from "../../../components/Modal/ConfirmationModal";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -43,12 +44,33 @@ const EmployerList = () => {
   const [sortField, setSortField] = useState("full_name");
   const [sortDirection, setSortDirection] = useState("asc");
   const [totalPages, setTotalPages] = useState(1);
+  const [timezone, setTimezone] = useState("Africa/Cairo");
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [modalState, setModalState] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: () => {},
+    onSecondaryAction: () => {},
+    confirmText: "Confirm",
+    secondaryText: null,
+  });
   const navigate = useNavigate();
 
   const getMonthName = (monthNumber) => {
     const months = [
-      "January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December"
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
     ];
     return months[monthNumber - 1] || "";
   };
@@ -74,6 +96,12 @@ const EmployerList = () => {
     };
     fetchAllDepartments();
   }, []);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const debouncedFetchEmployers = useCallback(
     debounce(async (page, dept, query, sort, direction) => {
@@ -97,7 +125,9 @@ const EmployerList = () => {
           toast.error("Please login to continue", { theme: "colored" });
           navigate("/login");
         } else {
-          toast.error(error.message || "Failed to fetch employers", { theme: "colored" });
+          toast.error(error.message || "Failed to fetch employers", {
+            theme: "colored",
+          });
         }
       } finally {
         setLoading(false);
@@ -108,11 +138,29 @@ const EmployerList = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-    debouncedFetchEmployers(1, departmentFilter, searchQuery, sortField, sortDirection);
-  }, [searchQuery, departmentFilter, sortField, sortDirection, debouncedFetchEmployers]);
+    debouncedFetchEmployers(
+      1,
+      departmentFilter,
+      searchQuery,
+      sortField,
+      sortDirection
+    );
+  }, [
+    searchQuery,
+    departmentFilter,
+    sortField,
+    sortDirection,
+    debouncedFetchEmployers,
+  ]);
 
   useEffect(() => {
-    debouncedFetchEmployers(currentPage, departmentFilter, searchQuery, sortField, sortDirection);
+    debouncedFetchEmployers(
+      currentPage,
+      departmentFilter,
+      searchQuery,
+      sortField,
+      sortDirection
+    );
   }, [currentPage, debouncedFetchEmployers]);
 
   const handleSearchChange = (e) => setSearchQuery(e.target.value.trim());
@@ -126,49 +174,210 @@ const EmployerList = () => {
       try {
         await deleteEmployer(id);
         toast.success("Employer deleted successfully", { theme: "colored" });
-        debouncedFetchEmployers(currentPage, departmentFilter, searchQuery, sortField, sortDirection);
+        debouncedFetchEmployers(
+          currentPage,
+          departmentFilter,
+          searchQuery,
+          sortField,
+          sortDirection
+        );
       } catch (error) {
         toast.error("Failed to delete employer", { theme: "colored" });
       }
     }
   };
 
-  const handleAttend = async (id) => {
+  const closeModal = () => {
+    setModalState((prev) => ({ ...prev, isOpen: false }));
+  };
+
+  const handleConfirmAttend = async (employerId, applyAdjustment) => {
+    closeModal();
     try {
-      await attendEmployer(id);
-      toast.success("Attendance marked successfully", { theme: "colored" });
-      debouncedFetchEmployers(currentPage, departmentFilter, searchQuery, sortField, sortDirection);
+      const response = await attendEmployer(
+        employerId,
+        applyAdjustment,
+        timezone
+      );
+
+      if (response.data?.adjustment) {
+        const adj = response.data.adjustment;
+        toast.success(
+          <div>
+            <p>Attendance recorded successfully</p>
+            <p className="text-sm mt-1">
+              {adj.kind === "addition" ? "+" : "-"} {adj.value} {adj.value_type}{" "}
+              ({adj.reason})
+            </p>
+          </div>,
+          { autoClose: 5000 }
+        );
+      } else {
+        toast.success(response.message || "Attendance marked successfully");
+      }
+
+      debouncedFetchEmployers(
+        currentPage,
+        departmentFilter,
+        searchQuery,
+        sortField,
+        sortDirection
+      );
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to mark attendance", { theme: "colored" });
+      const errorMessage =
+        error.response?.data?.message || "Failed to mark attendance";
+
+      if (error.response?.data?.details) {
+        toast.error(
+          <div>
+            <p>{errorMessage}</p>
+            <p className="text-sm mt-1">{error.response.data.details}</p>
+          </div>,
+          { autoClose: 7000 }
+        );
+      } else {
+        toast.error(errorMessage);
+      }
     }
   };
 
-  const handleLeave = async (id) => {
+  const handleAttendClick = (id) => {
+    const employer = employers.data.find((e) => e.id === id);
+    const scheduledTime = new Date();
+    const [hours, minutes] = employer.attendance_time.split(":");
+    scheduledTime.setHours(hours, minutes, 0, 0);
+
+    const status = currentTime < scheduledTime ? "early" : "late";
+
+    setModalState({
+      isOpen: true,
+      title: `Mark Attendance (${status === "early" ? "Early" : "Late"})`,
+      message: (
+        <div>
+          <p>Scheduled time: {employer.attendance_time}</p>
+          <p>
+            Current time:{" "}
+            {currentTime.toLocaleTimeString("en-US", { timeZone: timezone })}
+          </p>
+          <p className="mt-2">
+            {status === "early"
+              ? "This will be recorded as overtime."
+              : "This may result in a deduction."}
+          </p>
+          <ul className="list-disc pl-4 mt-2 text-sm">
+            <li>
+              <strong>With Adjustment:</strong> System will automatically
+              calculate the difference
+            </li>
+            <li>
+              <strong>Without Adjustment:</strong> Record the time without any
+              changes
+            </li>
+          </ul>
+        </div>
+      ),
+      onConfirm: () => handleConfirmAttend(id, true),
+      confirmText: "Save with Adjustment",
+      onSecondaryAction: () => handleConfirmAttend(id, false),
+      secondaryText: "Save without Adjustment",
+      onClose: closeModal,
+    });
+  };
+
+  const handleConfirmLeave = async (employerId, applyAdjustment) => {
+    if (!employerId) return;
+
+    closeModal();
     try {
-      await leaveEmployer(id);
-      toast.success("Leave marked successfully", { theme: "colored" });
-      debouncedFetchEmployers(currentPage, departmentFilter, searchQuery, sortField, sortDirection);
+      const response = await leaveEmployer(employerId, applyAdjustment);
+      toast.success(response.message || "Leave marked successfully");
+      debouncedFetchEmployers(
+        currentPage,
+        departmentFilter,
+        searchQuery,
+        sortField,
+        sortDirection
+      );
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to mark leave", { theme: "colored" });
+      toast.error(error.response?.data?.message || "Failed to mark leave");
     }
+  };
+
+  const handleLeaveClick = (id) => {
+    const employer = employers.data.find((e) => e.id === id);
+    const scheduledLeaveTime = new Date();
+    const leaveTimeStr = employer.leave_time || "17:00";
+    const [leaveHours, leaveMinutes] = leaveTimeStr.split(":");
+    scheduledLeaveTime.setHours(leaveHours, leaveMinutes, 0, 0);
+
+    const status = currentTime < scheduledLeaveTime ? "early" : "late";
+
+    setModalState({
+      isOpen: true,
+      title: `Mark Leave (${status === "early" ? "Early" : "Late"})`,
+      message: (
+        <div>
+          <p>
+            Scheduled leave time:{" "}
+            {new Date(
+              currentTime.setHours(leaveHours, leaveMinutes, 0, 0)
+            ).toLocaleTimeString("en-US", { timeZone: timezone, hour12: true })}
+          </p>
+          <p>
+            Current time:{" "}
+            {new Date().toLocaleTimeString("en-US", {
+              timeZone: timezone,
+              hour12: true,
+            })}
+          </p>
+          <p className="mt-2">
+            {status === "early"
+              ? "This will be recorded as early leave (may result in deduction)."
+              : "This will be recorded as late leave (may result in addition or nothing depending on the policy)."}
+          </p>
+          <ul className="list-disc pl-4 mt-2 text-sm">
+            <li>
+              <strong>With Adjustment:</strong> The system will automatically
+              calculate the difference
+            </li>
+            <li>
+              <strong>Without Adjustment:</strong> Record the time as is without
+              any changes
+            </li>
+          </ul>
+        </div>
+      ),
+      onConfirm: () => handleConfirmLeave(id, true),
+      confirmText: "Save with Adjustment",
+      onSecondaryAction: () => handleConfirmLeave(id, false),
+      secondaryText: "Save without Adjustment",
+      onClose: closeModal,
+    });
   };
 
   const handleSort = (field) => {
     setSortField(field);
-    setSortDirection(sortField === field && sortDirection === "asc" ? "desc" : "asc");
+    setSortDirection(
+      sortField === field && sortDirection === "asc" ? "desc" : "asc"
+    );
     setCurrentPage(1);
   };
 
   const getEmptyStateMessage = () => {
-    if (searchQuery && departmentFilter) return "No employees found matching your search and department.";
+    if (searchQuery && departmentFilter)
+      return "No employees found matching your search and department.";
     if (searchQuery) return "No employees found matching your search.";
-    if (departmentFilter) return `No employees in the ${departmentFilter} department.`;
+    if (departmentFilter)
+      return `No employees in the ${departmentFilter} department.`;
     return "No employees in the system.";
   };
 
-  const handlePreviousPage = () => currentPage > 1 && setCurrentPage(currentPage - 1);
-  const handleNextPage = () => currentPage < totalPages && setCurrentPage(currentPage + 1);
-  const goToPage = (page) => page >= 1 && page <= totalPages && setCurrentPage(page);
+  const handlePreviousPage = () =>
+    currentPage > 1 && setCurrentPage(currentPage - 1);
+  const handleNextPage = () =>
+    currentPage < totalPages && setCurrentPage(currentPage + 1);
+  const goToPage = (page) =>
+    page >= 1 && page <= totalPages && setCurrentPage(page);
 
   const getPageNumbers = () => {
     const showPages = 5;
@@ -673,7 +882,10 @@ const EmployerList = () => {
                         ))}
                       </select>
                     </div>
-                    {(searchQuery || departmentFilter || sortField !== "full_name" || sortDirection !== "asc") && (
+                    {(searchQuery ||
+                      departmentFilter ||
+                      sortField !== "full_name" ||
+                      sortDirection !== "asc") && (
                       <button
                         onClick={handleResetFilters}
                         className="btn btn-outline-secondary"
@@ -713,29 +925,63 @@ const EmployerList = () => {
                   <table className="table table-hover mb-0">
                     <thead className="table-header">
                       <tr>
-                        {["Employee", "National ID", "Department", "Phone", "Salary"].map((label, index) => (
+                        {[
+                          "Employee",
+                          "National ID",
+                          "Department",
+                          "Phone",
+                          "Salary",
+                        ].map((label, index) => (
                           <th
                             key={label}
                             className="sortable-header"
-                            onClick={() => handleSort(["full_name", "national_id", "department", "phone", "salary"][index])}
+                            onClick={() =>
+                              handleSort(
+                                [
+                                  "full_name",
+                                  "national_id",
+                                  "department",
+                                  "phone",
+                                  "salary",
+                                ][index]
+                              )
+                            }
                             scope="col"
                           >
                             <div className="d-flex align-items-center">
                               {label}
                               <FaSort
                                 className={`sort-icon ${
-                                  sortField === ["full_name", "national_id", "department", "phone", "salary"][index]
-                                    ? "active" : ""
+                                  sortField ===
+                                  [
+                                    "full_name",
+                                    "national_id",
+                                    "department",
+                                    "phone",
+                                    "salary",
+                                  ][index]
+                                    ? "active"
+                                    : ""
                                 } ${
-                                  sortField === ["full_name", "national_id", "department", "phone", "salary"][index] &&
-                                  sortDirection === "desc" ? "desc" : ""
+                                  sortField ===
+                                    [
+                                      "full_name",
+                                      "national_id",
+                                      "department",
+                                      "phone",
+                                      "salary",
+                                    ][index] && sortDirection === "desc"
+                                    ? "desc"
+                                    : ""
                                 }`}
                               />
                             </div>
                           </th>
                         ))}
                         <th scope="col">Salary Summary</th>
-                        <th scope="col" style={{ textAlign: "center" }}>Actions</th>
+                        <th scope="col" style={{ textAlign: "center" }}>
+                          Actions
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -747,7 +993,9 @@ const EmployerList = () => {
                                 {employer.full_name.charAt(0).toUpperCase()}
                               </div>
                               <div>
-                                <div className="fw-bold">{employer.full_name}</div>
+                                <div className="fw-bold">
+                                  {employer.full_name}
+                                </div>
                                 <small className="text-gray-500 d-block d-md-none">
                                   ID: {employer.id}
                                 </small>
@@ -785,20 +1033,34 @@ const EmployerList = () => {
                               onClick={async () => {
                                 const token = localStorage.getItem("userToken");
                                 if (!token) {
-                                  toast.error("Please login to view salary summary");
+                                  toast.error(
+                                    "Please login to view salary summary"
+                                  );
                                   navigate("/login");
                                   return;
                                 }
                                 try {
                                   setLoading(true);
-                                  const response = await calculateSalarySummary(employer.id);
-                                  const monthName = getMonthName(new Date().getMonth() + 1);
-                                  toast.success(`Salary summary calculated for ${monthName}`);
-                                  navigate(`/employers/${employer.id}/salary-summary`, {
-                                    state: { summaryData: response.data },
-                                  });
+                                  const response = await calculateSalarySummary(
+                                    employer.id
+                                  );
+                                  const monthName = getMonthName(
+                                    new Date().getMonth() + 1
+                                  );
+                                  toast.success(
+                                    `Salary summary calculated for ${monthName}`
+                                  );
+                                  navigate(
+                                    `/employers/${employer.id}/salary-summary`,
+                                    {
+                                      state: { summaryData: response.data },
+                                    }
+                                  );
                                 } catch (error) {
-                                  toast.error(error.response?.data?.message || "Failed to calculate salary summary");
+                                  toast.error(
+                                    error.response?.data?.message ||
+                                      "Failed to calculate salary summary"
+                                  );
                                 } finally {
                                   setLoading(false);
                                 }
@@ -808,28 +1070,62 @@ const EmployerList = () => {
                               disabled={loading}
                               aria-label={`View salary summary for ${employer.full_name}`}
                             >
-                              <FaMoneyBillWave size={16} />  
+                              <FaMoneyBillWave size={16} />
                             </button>
                           </td>
                           <td data-label="Actions">
                             <div className="d-flex gap-1 action-buttons">
                               {[
-                                { action: handleAttend, icon: FiClock, color: "bg-indigo-100 text-indigo-600", title: "Mark attendance" },
-                                { action: handleLeave, icon: FiLogOut, color: "bg-amber-100 text-amber-600", title: "Mark leave" },
-                                { action: () => navigate(`/employers/${employer.id}/edit`), icon: FiEdit2, color: "bg-cyan-100 text-cyan-600", title: "Edit" },
-                                { action: () => navigate(`/employers/${employer.id}/adjustments`), icon: HiOutlineAdjustments, color: "bg-gray-100 text-gray-600", title: "Adjustments" },
-                                { action: handleDelete, icon: FiTrash2, color: "bg-red-100 text-red-600", title: "Delete" },
-                              ].map(({ action, icon: Icon, color, title }, index) => (
-                                <button
-                                  key={index}
-                                  onClick={() => action(employer.id)}
-                                  className={`action-btn ${color}`}
-                                  title={title}
-                                  aria-label={`${title} for ${employer.full_name}`}
-                                >
-                                  <Icon size={16} />
-                                </button>
-                              ))}
+                                {
+                                  action: handleAttendClick,
+                                  icon: FiClock,
+                                  color: "bg-indigo-100 text-indigo-600",
+                                  title: "Mark attendance",
+                                },
+                                {
+                                  action: handleLeaveClick,
+                                  icon: FiLogOut,
+                                  color: "bg-amber-100 text-amber-600",
+                                  title: "Mark leave",
+                                },
+                                {
+                                  action: () =>
+                                    navigate(`/employers/${employer.id}/edit`),
+                                  icon: FiEdit2,
+                                  color: "bg-cyan-100 text-cyan-600",
+                                  title: "Edit",
+                                },
+                                {
+                                  action: () =>
+                                    navigate(
+                                      `/employers/${employer.id}/adjustments`
+                                    ),
+                                  icon: HiOutlineAdjustments,
+                                  color: "bg-gray-100 text-gray-600",
+                                  title: "Adjustments",
+                                },
+                                {
+                                  action: handleDelete,
+                                  icon: FiTrash2,
+                                  color: "bg-red-100 text-red-600",
+                                  title: "Delete",
+                                },
+                              ].map(
+                                (
+                                  { action, icon: Icon, color, title },
+                                  index
+                                ) => (
+                                  <button
+                                    key={index}
+                                    onClick={() => action(employer.id)}
+                                    className={`action-btn ${color}`}
+                                    title={title}
+                                    aria-label={`${title} for ${employer.full_name}`}
+                                  >
+                                    <Icon size={16} />
+                                  </button>
+                                )
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -841,7 +1137,9 @@ const EmployerList = () => {
                 <div className="pagination-container">
                   <div className="pagination-wrapper">
                     <div className="pagination-info">
-                      Showing {(currentPage - 1) * 10 + 1} to {Math.min(currentPage * 10, employers.total)} of {employers.total} employees
+                      Showing {(currentPage - 1) * 10 + 1} to{" "}
+                      {Math.min(currentPage * 10, employers.total)} of{" "}
+                      {employers.total} employees
                     </div>
                     <div className="pagination-controls">
                       <button
@@ -857,25 +1155,43 @@ const EmployerList = () => {
                         <>
                           {currentPage > 3 && (
                             <>
-                              <div className="page-number" onClick={() => goToPage(1)} aria-label="Page 1">1</div>
-                              {currentPage > 4 && <span className="page-ellipsis">...</span>}
+                              <div
+                                className="page-number"
+                                onClick={() => goToPage(1)}
+                                aria-label="Page 1"
+                              >
+                                1
+                              </div>
+                              {currentPage > 4 && (
+                                <span className="page-ellipsis">...</span>
+                              )}
                             </>
                           )}
                           {getPageNumbers().map((page) => (
                             <div
                               key={page}
-                              className={`page-number ${currentPage === page ? "active" : ""}`}
+                              className={`page-number ${
+                                currentPage === page ? "active" : ""
+                              }`}
                               onClick={() => goToPage(page)}
                               aria-label={`Page ${page}`}
-                              aria-current={currentPage === page ? "page" : undefined}
+                              aria-current={
+                                currentPage === page ? "page" : undefined
+                              }
                             >
                               {page}
                             </div>
                           ))}
                           {currentPage < totalPages - 2 && (
                             <>
-                              {currentPage < totalPages - 3 && <span className="page-ellipsis">...</span>}
-                              <div className="page-number" onClick={() => goToPage(totalPages)} aria-label={`Page ${totalPages}`}>
+                              {currentPage < totalPages - 3 && (
+                                <span className="page-ellipsis">...</span>
+                              )}
+                              <div
+                                className="page-number"
+                                onClick={() => goToPage(totalPages)}
+                                aria-label={`Page ${totalPages}`}
+                              >
                                 {totalPages}
                               </div>
                             </>
@@ -899,6 +1215,17 @@ const EmployerList = () => {
           </div>
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={modalState.isOpen}
+        title={modalState.title}
+        message={modalState.message}
+        onConfirm={modalState.onConfirm}
+        onSecondaryAction={modalState.onSecondaryAction}
+        confirmText={modalState.confirmText}
+        secondaryText={modalState.secondaryText}
+        onClose={closeModal}
+      />
     </div>
   );
 };

@@ -74,14 +74,14 @@ const EditUser = () => {
   const validateForm = () => {
     let newErrors = {};
 
-    // Full name validation
+     
     if (!user.full_name) {
       newErrors.full_name = "Full name is required";
     } else if (!/^[^0-9]+$/.test(user.full_name)) {
       newErrors.full_name = "Name cannot contain numbers";
     }
 
-    // Username validation
+     
     if (!user.username) {
       newErrors.username = "Username is required";
     } else if (!/^(?=.*[a-zA-Z])[a-zA-Z0-9]+$/.test(user.username)) {
@@ -89,19 +89,19 @@ const EditUser = () => {
         "Username must contain at least one letter and can include numbers";
     }
 
-    // Email validation
+     
     if (!user.email) {
       newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(user.email)) {
       newErrors.email = "Invalid email format";
     }
 
-    // Password validation (only if changed)
+     
     if (user.password && !/^\w{6,}$/.test(user.password)) {
       newErrors.password = "Password must be at least 6 characters";
     }
 
-    // Role validation
+     
     if (!user.role) {
       newErrors.role = "Role is required";
     }
@@ -113,7 +113,7 @@ const EditUser = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setUser((prev) => ({ ...prev, [name]: value }));
-    // Clear error when user starts typing
+     
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
@@ -130,7 +130,7 @@ const EditUser = () => {
     }
 
     try {
-      // Check username uniqueness
+       
       const usernameExists = await checkUsernameUnique(user.username);
       if (usernameExists && user.username !== originalUser.username) {
         setErrors((prev) => ({
@@ -140,7 +140,7 @@ const EditUser = () => {
         return;
       }
 
-      // Check email uniqueness
+       
       const emailExists = await checkEmailUnique(user.email);
       if (emailExists && user.email !== originalUser.email) {
         setErrors((prev) => ({ ...prev, email: "Email is already taken" }));

@@ -20,7 +20,7 @@ const createAdjustment = async (adjustmentData) => {
   }
 };
 
-// Update an existing adjustment
+ 
 const updateAdjustment = async (id, adjustmentData) => {
   try {
     const response = await api.put(`/adjustments/${id}`, adjustmentData);

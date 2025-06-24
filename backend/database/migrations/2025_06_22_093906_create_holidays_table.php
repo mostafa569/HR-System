@@ -11,9 +11,9 @@ return new class extends Migration
         Schema::create('holidays', function (Blueprint $table) {
             $table->id();
             $table->string('day');
-            $table->date('date')->nullable()->comment('nullable for weekly holidays');
+            $table->date('date')->unique();
             $table->string('type')->comment('ENUM: weekly, official');
-            $table->string('name');
+            $table->string('name')->nullable();
             $table->timestamps();
         });
     }

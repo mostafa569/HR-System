@@ -25,7 +25,7 @@ const AddUser = () => {
       ...prev,
       [name]: value,
     }));
-    // مسح رسالة الخطأ عند بدء الكتابة
+    
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
@@ -70,14 +70,14 @@ const AddUser = () => {
 
     let newErrors = {};
 
-    // Full name validation
+    
     if (!full_name) {
       newErrors.full_name = "Full name is required";
     } else if (!/^[^0-9]+$/.test(full_name)) {
       newErrors.full_name = "Name cannot contain numbers";
     }
 
-    // Username validation
+   
     if (!username) {
       newErrors.username = "Username is required";
     } else if (!/^(?=.*[a-zA-Z])[a-zA-Z0-9]+$/.test(username)) {
@@ -85,21 +85,21 @@ const AddUser = () => {
         "Username must contain at least one letter and can include numbers";
     }
 
-    // Email validation
+    
     if (!email) {
       newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(email)) {
       newErrors.email = "Invalid email format";
     }
 
-    // Password validation
+    
     if (!password) {
       newErrors.password = "Password is required";
     } else if (!/^\w{6,}$/.test(password)) {
       newErrors.password = "Password must be at least 6 characters";
     }
 
-    // Role validation
+     
     if (!role) {
       newErrors.role = "Role is required";
     }
@@ -111,7 +111,7 @@ const AddUser = () => {
     }
 
     try {
-      // Check username uniqueness
+       
       const usernameExists = await checkUsernameUnique(username);
       if (usernameExists) {
         setErrors((prev) => ({
@@ -121,7 +121,7 @@ const AddUser = () => {
         return;
       }
 
-      // Check email uniqueness
+     
       const emailExists = await checkEmailUnique(email);
       if (emailExists) {
         setErrors((prev) => ({ ...prev, email: "Email is already taken" }));

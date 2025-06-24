@@ -14,7 +14,7 @@ return new class extends Migration
             $table->foreignId('department_id')->nullable()->constrained('departments')->onDelete('set null');
             $table->date('date');
             $table->time('attendance_time');
-            $table->time('leave_time')->nullable()->change();
+            $table->time('leave_time')->nullable();
             $table->timestamps();
         });
     }
