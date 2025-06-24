@@ -1083,12 +1083,13 @@ const EditEmployer = () => {
                       <span className="input-group-text">
                         <FaClock />
                       </span>
-                      <input
+                     <input
                         type="time"
                         className={`form-control ${
                           errors.leave_time ? "is-invalid" : ""
                         }`}
                         id="leave_time"
+                        name="leave_time" 
                         value={formData.leave_time}
                         onChange={handleChange}
                       />
