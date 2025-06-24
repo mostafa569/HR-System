@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Holiday;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class HolidayController extends Controller
 {
@@ -22,23 +23,36 @@ class HolidayController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'day' => 'nullable|string',
+        $validated = $request->validate([
+            'day' => 'required|string',
             'date' => 'required|date',
-            'type' => 'nullable|string',
-            'name' => 'required|string',
+            'type' => ['required', Rule::in(['official', 'weekly'])],
+            'name' => [
+                'nullable',
+                'string',
+                Rule::when($request->type === 'official', ['required', 'string', 'min:1']),
+            ],
         ]);
 
-        DB::table('holidays')->insert([
-            'day' => $request->day,
-            'date' => $request->date,
-            'type' => $request->type,
-            'name' => $request->name,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        // Ensure name is null for weekly holidays if empty
+        if ($validated['type'] === 'weekly' && empty($validated['name'])) {
+            $validated['name'] = null;
+        }
 
-        return response()->json(['message' => 'Holiday inserted successfully'], 201);
+        try {
+            DB::table('holidays')->insert([
+                'day' => $validated['day'],
+                'date' => $validated['date'],
+                'type' => $validated['type'],
+                'name' => $validated['name'],
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            return response()->json(['message' => 'Holiday created successfully'], 201);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to create holiday', 'error' => $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -60,28 +74,41 @@ class HolidayController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $request->validate([
-            'day' => 'nullable|string',
-            'date' => 'nullable|date',
-            'type' => 'nullable|string',
-            'name' => 'nullable|string',
-        ]);
-
         $holiday = DB::table('holidays')->where('id', $id)->first();
 
         if (!$holiday) {
             return response()->json(['message' => 'Holiday not found'], 404);
         }
 
-        DB::table('holidays')->where('id', $id)->update([
-            'day' => $request->day ?? $holiday->day,
-            'date' => $request->date ?? $holiday->date,
-            'type' => $request->type ?? $holiday->type,
-            'name' => $request->name ?? $holiday->name,
-            'updated_at' => now(),
+        $validated = $request->validate([
+            'day' => 'required|string',
+            'date' => 'required|date',
+            'type' => ['required', Rule::in(['official', 'weekly'])],
+            'name' => [
+                'nullable',
+                'string',
+                Rule::when($request->type === 'official', ['required', 'string', 'min:1']),
+            ],
         ]);
 
-        return response()->json(['message' => 'Holiday updated successfully']);
+        // Ensure name is null for weekly holidays if empty
+        if ($validated['type'] === 'weekly' && empty($validated['name'])) {
+            $validated['name'] = null;
+        }
+
+        try {
+            DB::table('holidays')->where('id', $id)->update([
+                'day' => $validated['day'],
+                'date' => $validated['date'],
+                'type' => $validated['type'],
+                'name' => $validated['name'],
+                'updated_at' => now(),
+            ]);
+
+            return response()->json(['message' => 'Holiday updated successfully']);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to update holiday', 'error' => $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -95,8 +122,11 @@ class HolidayController extends Controller
             return response()->json(['message' => 'Holiday not found'], 404);
         }
 
-        DB::table('holidays')->where('id', $id)->delete();
-
-        return response()->json(['message' => 'Holiday deleted successfully']);
+        try {
+            DB::table('holidays')->where('id', $id)->delete();
+            return response()->json(['message' => 'Holiday deleted successfully']);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to delete holiday', 'error' => $e->getMessage()], 500);
+        }
     }
 }

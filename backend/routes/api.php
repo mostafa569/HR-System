@@ -13,6 +13,10 @@ Route::post('employers/{id}/leave', [EmployerController::class, 'leaveEmployer']
 Route::apiResource('departments', DepartmentController::class);
 Route::post('/hr/logout', [HrAuthController::class, 'logout']);
    
+
+});
 Route::apiResource('holidays', HolidayController::class);
 
+Route::get('/holidays-view', function () {
+  return view('holidays');
 });
