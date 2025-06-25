@@ -183,7 +183,9 @@ class SalarySummaryController extends Controller
 
                 $totalDeductions = $summary->total_deductions + $summary->absent_deduction;
                 $summary->final_salary = max(0, $employer->salary + $summary->total_additions - $totalDeductions);
-
+                if (isset($summary->attendance_days) && $summary->attendance_days == 0) {
+                    $summary->final_salary = 0;
+                }
                 return $summary;
             });
 
