@@ -13,8 +13,12 @@ export const getSalarySummary = async (employerId) => {
 export const getAllSalarySummaries = async (
   page = 1,
   search = "",
-  sortBy = "full_name",
-  sortDirection = "asc"
+  sortBy = "year",
+  sortDirection = "desc",
+  month = "",
+  year = "",
+  department_id = "",
+  per_page = 10
 ) => {
   try {
     const response = await api.get("/salary", {
@@ -23,6 +27,10 @@ export const getAllSalarySummaries = async (
         search,
         sort_by: sortBy,
         sort_direction: sortDirection,
+        month,
+        year,
+        department_id,
+        per_page,
       },
     });
     return response.data;

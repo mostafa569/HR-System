@@ -33,7 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Salary Management
     Route::prefix('salary')->group(function () {
-        Route::get('/', [SalarySummaryController::class, 'index']);
+        Route::get('', [SalarySummaryController::class, 'index']);
         Route::post('/calculate', [SalarySummaryController::class, 'calculate']);
         Route::get('/summary/{employerId}', [SalarySummaryController::class, 'getSalarySummary']);
     });
