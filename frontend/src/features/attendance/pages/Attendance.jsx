@@ -230,7 +230,7 @@ const Attendance = () => {
       ...values,
       attendance_time: values.attendance_time.format("HH:mm"),
       leave_time: values.leave_time ? values.leave_time.format("HH:mm") : null,
-      apply_adjustment: applyAdjustment,
+      apply_adjustment: applyAdjustment, // This is correctly passed
     };
 
     axios
