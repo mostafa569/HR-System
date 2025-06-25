@@ -1,35 +1,4 @@
-import axios from "axios";
-
-const api = axios.create({
-  baseURL: "http://127.0.0.1:8000/api",
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("userToken");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem("userToken");
-      window.location.href = "/login";
-    }
-    return Promise.reject(error);
-  }
-);
+import api from "../../auth/services/api";
 
 export const getSalarySummary = async (employerId) => {
   try {
@@ -44,8 +13,12 @@ export const getSalarySummary = async (employerId) => {
 export const getAllSalarySummaries = async (
   page = 1,
   search = "",
-  sortBy = "full_name",
-  sortDirection = "asc"
+  sortBy = "year",
+  sortDirection = "desc",
+  month = "",
+  year = "",
+  department_id = "",
+  per_page = 10
 ) => {
   try {
     const response = await api.get("/salary", {
@@ -54,6 +27,10 @@ export const getAllSalarySummaries = async (
         search,
         sort_by: sortBy,
         sort_direction: sortDirection,
+        month,
+        year,
+        department_id,
+        per_page,
       },
     });
     return response.data;
@@ -73,7 +50,6 @@ export const calculateSalarySummary = async (employeeId) => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth() + 1;
 
- 
     const existingSummary = await api.get(`/salary/summary/${employeeId}`);
     if (existingSummary.data?.summaries?.length > 0) {
       const existingRecord = existingSummary.data.summaries.find(
@@ -82,21 +58,26 @@ export const calculateSalarySummary = async (employeeId) => {
 
       if (existingRecord) {
         await api.delete(`/salary/calculate/${existingRecord.id}`);
-         
-        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        await new Promise((resolve) => setTimeout(resolve, 1000));
         const verifyDeletion = await api.get(`/salary/summary/${employeeId}`);
-        if (verifyDeletion.data?.summaries?.some(s => s.id === existingRecord.id)) {
+        if (
+          verifyDeletion.data?.summaries?.some(
+            (s) => s.id === existingRecord.id
+          )
+        ) {
           throw new Error("Failed to delete existing record");
         }
-      }}
+      }
+    }
 
-     const payload = {
-      employer_id: employeeId,  
+    const payload = {
+      employer_id: employeeId,
       year: year,
-      month: month,  
+      month: month,
     };
 
-    console.log("Sending payload:", payload);  
+    console.log("Sending payload:", payload);
 
     const response = await api.post(`/salary/calculate`, payload);
 
@@ -108,7 +89,7 @@ export const calculateSalarySummary = async (employeeId) => {
   } catch (error) {
     console.error("Error calculating salary summary:", error);
     if (error.response) {
-      console.error("Server response:", error.response.data);  
+      console.error("Server response:", error.response.data);
       switch (error.response.status) {
         case 422:
           throw new Error("Invalid data format. Please check your input.");

@@ -109,7 +109,7 @@ const SalarySummary = () => {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
- 
+
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
   };
@@ -355,9 +355,7 @@ const SalarySummary = () => {
                               </span>
                             </div>
                             <div className="d-flex justify-content-between py-2 border-bottom">
-                              <span className="text-muted">
-                                 Deductions:
-                              </span>
+                              <span className="text-muted">Deductions:</span>
                               <span className="text-danger fw-semibold">
                                 -
                                 {paginatedSummaries[0]?.total_deductions?.toLocaleString() ||
@@ -578,6 +576,18 @@ const SalarySummary = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Note if attendance_days == 0 */}
+              {paginatedSummaries.some(
+                (summary) => summary.attendance_days === 0
+              ) && (
+                <div
+                  className="alert alert-warning mt-2"
+                  style={{ fontWeight: "bold" }}
+                >
+                  Note: The employee did not attend any day during this period.
+                </div>
+              )}
 
               {/* Pagination */}
               {totalPages > 1 && (
