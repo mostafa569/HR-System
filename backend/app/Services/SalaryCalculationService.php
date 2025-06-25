@@ -25,7 +25,6 @@ class SalaryCalculationService
             $baseSalary = $employer->salary;
 
             $dateRange = $this->getDateRange($year, $month);
-            // $daysInMonth = $dateRange['startDate']->daysInMonth;
             $daysInMonth = 30;
 
             $holidays = $this->getHolidays($dateRange['startDate'], $dateRange['endDate']);
@@ -40,6 +39,10 @@ class SalaryCalculationService
 
             $salaryCalculations = $this->calculateFinalSalary($baseSalary, $daysInMonth, $absentDays, $adjustmentCalculations);
 
+            if ($attendanceDays == 0) {
+                $salaryCalculations['final_salary'] = 0;
+            }
+
             $data = [
                 'attendance_days' => $attendanceDays,
                 'absent_days' => $absentDays,
@@ -50,10 +53,12 @@ class SalaryCalculationService
                 'final_salary' => $salaryCalculations['final_salary'],
             ];
             
+            \Log::info('Saving salary summary for employer_id: ' . $employerId . ', year: ' . $year . ', month: ' . $month . ', attendance_days: ' . $attendanceDays);
+
             $this->saveSalarySummary($employerId, $year, $month, $dateRange, $attendanceDays, $absentDays, $adjustmentCalculations, $salaryCalculations);
 
             DB::commit();
-             
+            
             return $this->formatSalaryResponse($employerId, $year, $month, $dateRange, $daysInMonth, $baseSalary, $hourlyRate, $attendanceDays, $absentDays, $adjustmentCalculations, $salaryCalculations, $workingHoursPerDay);
 
         } catch (\Exception $e) {
@@ -64,25 +69,23 @@ class SalaryCalculationService
     }
 
     protected function calculateWorkingHoursPerDay($employer)
-{
-    if (!$employer->attendance_time || !$employer->leave_time) {
-        return 8;  
+    {
+        if (!$employer->attendance_time || !$employer->leave_time) {
+            return 8;  
+        }
+
+        $attendance = Carbon::createFromTimeString($employer->attendance_time);
+        $leave = Carbon::createFromTimeString($employer->leave_time);
+
+        $workingHours = abs($leave->diffInHours($attendance));
+
+        if ($workingHours > 12) {
+            $workingHours = 24 - $workingHours;
+        }
+
+        return $workingHours;
     }
 
-     
-    $attendance = Carbon::createFromTimeString($employer->attendance_time);
-    $leave = Carbon::createFromTimeString($employer->leave_time);
-
-     
-    $workingHours = abs($leave->diffInHours($attendance));
-
-     
-    if ($workingHours > 12) {
-        $workingHours = 24 - $workingHours;
-    }
-
-    return $workingHours;
-}
     protected function getEmployer($employerId)
     {
         return Employer::findOrFail($employerId);
@@ -158,9 +161,6 @@ class SalaryCalculationService
             }
         }
 
-       
-        // $totalAdditions += ($additionsHours * $hourlyRate);
-
         return [
             'additions_hours' => round($additionsHours, 2),
             'deductions_hours' => round($deductionsHours, 2),
@@ -190,10 +190,8 @@ class SalaryCalculationService
 
     protected function saveSalarySummary($employerId, $year, $month, $dateRange, $attendanceDays, $absentDays, $adjustmentCalculations, $salaryCalculations)
     {
-         
         $monthName = Carbon::create()->month($month)->format('F');
     
-         
         $existingSummary = SalarySummary::where('employer_id', $employerId)
             ->where('year', $year)
             ->where('month', $monthName)
