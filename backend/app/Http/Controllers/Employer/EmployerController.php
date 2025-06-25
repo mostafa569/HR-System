@@ -203,9 +203,9 @@ class EmployerController extends Controller
             ->whereDate('date', $today)
             ->first();
     
-        if ($attendance && $attendance->leave_time) {
-            return response()->json(['message' => 'Cannot mark attendance after leave time'], 400);
-        }
+        // if ($attendance && $attendance->leave_time) {
+        //     return response()->json(['message' => 'Cannot mark attendance after leave time'], 400);
+        // }
     
         if ($attendance && $attendance->attendance_time) {
             return response()->json(['message' => 'Attendance already marked'], 400);

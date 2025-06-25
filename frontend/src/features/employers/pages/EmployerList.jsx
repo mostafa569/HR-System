@@ -33,6 +33,7 @@ import {
 import ConfirmationModal from "../../../components/Modal/ConfirmationModal";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "react-toastify/dist/ReactToastify.css";
+import { ToastContainer } from "react-toastify";
 
 const EmployerList = () => {
   const [employers, setEmployers] = useState({ data: [], total: 0 });
@@ -1226,6 +1227,8 @@ const EmployerList = () => {
         secondaryText={modalState.secondaryText}
         onClose={closeModal}
       />
+
+      <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
 };

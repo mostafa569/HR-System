@@ -76,6 +76,15 @@ class AttendanceController extends Controller
             'leave_time' => 'nullable|date_format:H:i',
         ]);
 
+        if (
+            isset($validated['attendance_time']) &&
+            isset($validated['leave_time']) &&
+            Carbon::createFromFormat('H:i', $validated['attendance_time'])
+                ->greaterThanOrEqualTo(Carbon::createFromFormat('H:i', $validated['leave_time']))
+        ) {
+            return response()->json(['message' => 'Attendance time must be before leave time'], 400);
+        }
+
         $existingAttendance = Attendance::where('employer_id', $validated['employer_id'])
             ->where('date', $validated['date'])
             ->first();
@@ -118,14 +127,6 @@ return response()->json(['message' => 'Attendance record added successfully', 'd
             ->whereDate('date', $today)
             ->first();
     
-        if ($attendance && $attendance->leave_time) {
-            return response()->json(['message' => 'Cannot mark attendance after leave time'], 400);
-        }
-    
-        if ($attendance && $attendance->attendance_time) {
-            return response()->json(['message' => 'Attendance already marked'], 400);
-        }
-    
         if (!$attendance) {
             $attendance = new Attendance();
             $attendance->employer_id = $id;
@@ -133,23 +134,28 @@ return response()->json(['message' => 'Attendance record added successfully', 'd
             $attendance->date = $today;
         }
     
-        $now = Carbon::now('Africa/Cairo');
+        $attendanceTimeStr = $request->input('attendance_time');
+        if ($attendanceTimeStr) {
+            $attendanceTime = Carbon::createFromFormat('H:i', $attendanceTimeStr, 'Africa/Cairo');
+        } else {
+            $attendanceTime = Carbon::now('Africa/Cairo');
+            $attendanceTimeStr = $attendanceTime->format('H:i');
+        }
         $scheduledLeaveTime = Carbon::createFromTimeString($employer->leave_time, 'Africa/Cairo');
     
-        if ($now->greaterThan($scheduledLeaveTime)) {
+        if ($attendanceTime->greaterThan($scheduledLeaveTime)) {
             return response()->json(['message' => 'Cannot mark attendance after scheduled leave time'], 400);
         }
     
-        $attendance->attendance_time = $now->format('H:i');
+        $attendance->attendance_time = $attendanceTimeStr;
         $attendance->save();
     
         $adjustmentMessage = '';
         if ($request->input('apply_adjustment', true)) {
-            $recordedTime = Carbon::createFromTimeString($attendance->attendance_time, 'Africa/Cairo');
+            $recordedTime = $attendanceTime;
             $scheduledTime = Carbon::createFromTimeString($employer->attendance_time, 'Africa/Cairo');
     
             if ($recordedTime->gt($scheduledTime)) {
-                
                 $minutesLate = $recordedTime->diffInMinutes($scheduledTime);
                 $hours = abs(round($minutesLate / 60, 2));
                 Adjustment::create([
@@ -162,7 +168,6 @@ return response()->json(['message' => 'Attendance record added successfully', 'd
                 ]);
                 $adjustmentMessage = "Deducted {$hours} hours for late arrival";
             } elseif ($recordedTime->lt($scheduledTime)) {
-              
                 $minutesEarly = $scheduledTime->diffInMinutes($recordedTime);
                 $hours = abs(round($minutesEarly / 60, 2));
                 Adjustment::create([
@@ -192,7 +197,6 @@ return response()->json(['message' => 'Attendance record added successfully', 'd
     
         $today = Carbon::today('Africa/Cairo');
     
-        
         $holiday = Holiday::where('date', $today)->first();
         if ($holiday) {
             return response()->json([
@@ -214,17 +218,22 @@ return response()->json(['message' => 'Attendance record added successfully', 'd
             return response()->json(['message' => 'Leave already marked'], 400);
         }
     
-        $now = Carbon::now('Africa/Cairo');
-        $attendance->leave_time = $now->format('H:i');
+        $leaveTimeStr = $request->input('leave_time');
+        if ($leaveTimeStr) {
+            $leaveTime = Carbon::createFromFormat('H:i', $leaveTimeStr, 'Africa/Cairo');
+        } else {
+            $leaveTime = Carbon::now('Africa/Cairo');
+            $leaveTimeStr = $leaveTime->format('H:i');
+        }
+        $attendance->leave_time = $leaveTimeStr;
         $attendance->save();
     
         $adjustmentMessage = '';
         if ($request->input('apply_adjustment', true)) {
-            $recordedLeave = Carbon::createFromTimeString($attendance->leave_time, 'Africa/Cairo');
+            $recordedLeave = $leaveTime;
             $scheduledLeave = Carbon::createFromTimeString($employer->leave_time, 'Africa/Cairo');
     
             if ($recordedLeave->gt($scheduledLeave)) {
-              
                 $minutesLate = $recordedLeave->diffInMinutes($scheduledLeave);
                 $hours = abs(round($minutesLate / 60, 2));
                 Adjustment::create([
@@ -237,7 +246,6 @@ return response()->json(['message' => 'Attendance record added successfully', 'd
                 ]);
                 $adjustmentMessage = "Added {$hours} hours for overtime";
             } elseif ($recordedLeave->lt($scheduledLeave)) {
-              
                 $minutesEarly = $scheduledLeave->diffInMinutes($recordedLeave);
                 $hours = abs(round($minutesEarly / 60, 2));
                 Adjustment::create([
@@ -273,6 +281,15 @@ return response()->json(['message' => 'Attendance record added successfully', 'd
             'attendance_time' => 'sometimes|required|date_format:H:i',
             'leave_time' => 'nullable|date_format:H:i',
         ]);
+
+        if (
+            isset($validated['attendance_time']) &&
+            isset($validated['leave_time']) &&
+            Carbon::createFromFormat('H:i', $validated['attendance_time'])
+                ->greaterThanOrEqualTo(Carbon::createFromFormat('H:i', $validated['leave_time']))
+        ) {
+            return response()->json(['message' => 'Attendance time must be before leave time'], 400);
+        }
 
        
         if (isset($validated['date'])) {

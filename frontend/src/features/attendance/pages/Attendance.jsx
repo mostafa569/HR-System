@@ -23,6 +23,10 @@ import {
 import { ClockCircleOutlined } from "@ant-design/icons";
 import moment from "moment";
 import styles from "../styles/Attendance.module.css";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { ToastContainer } from "react-toastify";
+import ConfirmationModal from "../../../components/Modal/ConfirmationModal";
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
@@ -50,6 +54,12 @@ const Attendance = () => {
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [form] = Form.useForm();
+  const [editForm] = Form.useForm();
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmMessage, setConfirmMessage] = useState("");
+  const [onConfirm, setOnConfirm] = useState(() => () => {});
+  const [isConfirmModalVisible, setIsConfirmModalVisible] = useState(false);
+  const [pendingEditValues, setPendingEditValues] = useState(null);
 
   useEffect(() => {
     axios
@@ -173,23 +183,29 @@ const Attendance = () => {
         }
       )
       .then((response) => {
-        message.success(response.data.message);
+        toast.success(response.data.message);
         setIsAddModalVisible(false);
         form.resetFields();
         fetchAttendances();
       })
       .catch((error) => {
         console.error("Error adding attendance:", error);
-        message.error(
-          error.response?.data?.message || "Error adding attendance"
-        );
+        if (
+          error.response &&
+          error.response.data &&
+          error.response.data.message
+        ) {
+          toast.error(error.response.data.message);
+        } else {
+          toast.error("حدث خطأ غير متوقع");
+        }
       });
   };
 
   const handleEdit = (record) => {
     setSelectedRecord(record);
     setIsEditModalVisible(true);
-    form.setFieldsValue({
+    editForm.setFieldsValue({
       employer_id: record.employer_id,
       date: moment(record.date),
       attendance_time: record.attendance_time
@@ -200,36 +216,52 @@ const Attendance = () => {
   };
 
   const handleSaveEdit = () => {
-    form
-      .validateFields()
-      .then((values) => {
-        const updatedRecord = {
-          ...selectedRecord,
-          ...values,
-          attendance_time: values.attendance_time.format("HH:mm"),
-          leave_time: values.leave_time
-            ? values.leave_time.format("HH:mm")
-            : null,
-        };
+    editForm.validateFields().then((values) => {
+      setPendingEditValues(values);
+      setIsConfirmModalVisible(true);
+    });
+  };
 
-        return axios.put(
-          `http://localhost:8000/api/attendances/${selectedRecord.id}`,
-          updatedRecord,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("userToken")}`,
-            },
-          }
-        );
-      })
+  const confirmEditSave = (applyAdjustment) => {
+    if (!pendingEditValues) return;
+    const values = pendingEditValues;
+    const updatedRecord = {
+      ...selectedRecord,
+      ...values,
+      attendance_time: values.attendance_time.format("HH:mm"),
+      leave_time: values.leave_time ? values.leave_time.format("HH:mm") : null,
+      apply_adjustment: applyAdjustment,
+    };
+
+    axios
+      .put(
+        `http://localhost:8000/api/attendances/${selectedRecord.id}`,
+        updatedRecord,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("userToken")}`,
+          },
+        }
+      )
       .then(() => {
-        message.success("Attendance record updated");
+        toast.success("Attendance record updated");
         setIsEditModalVisible(false);
+        setIsConfirmModalVisible(false);
+        setPendingEditValues(null);
         fetchAttendances();
       })
       .catch((error) => {
-        console.error("Update error:", error);
-        message.error(error.response?.data?.message || "Error updating record");
+        setIsConfirmModalVisible(false);
+        setPendingEditValues(null);
+        if (
+          error.response &&
+          error.response.data &&
+          error.response.data.message
+        ) {
+          toast.error(error.response.data.message);
+        } else {
+          toast.error("Unexpected error occurred");
+        }
       });
   };
 
@@ -241,16 +273,21 @@ const Attendance = () => {
         },
       })
       .then(() => {
-        message.success("Attendance record deleted");
+        toast.success("Attendance record deleted");
         fetchAttendances();
       })
-      .catch((error) => message.error("Error deleting record"));
+      .catch((error) => {
+        if (
+          error.response &&
+          error.response.data &&
+          error.response.data.message
+        ) {
+          toast.error(error.response.data.message);
+        } else {
+          toast.error("Unexpected error occurred");
+        }
+      });
   };
-
- 
- 
-
-
 
   const columns = [
     {
@@ -396,12 +433,12 @@ const Attendance = () => {
         onOk={handleSaveEdit}
         onCancel={() => {
           setIsEditModalVisible(false);
-          form.resetFields();
+          editForm.resetFields();
         }}
         width={500}
       >
         {selectedRecord && (
-          <Form form={form} layout="vertical">
+          <Form form={editForm} layout="vertical">
             <Form.Item
               name="employer_id"
               label="Employee"
@@ -548,6 +585,38 @@ const Attendance = () => {
           </Form.Item>
         </Form>
       </Modal>
+      <ToastContainer />
+      <ConfirmationModal
+        show={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={onConfirm}
+        message={confirmMessage}
+      />
+      <ConfirmationModal
+        isOpen={isConfirmModalVisible}
+        title="Apply Adjustment?"
+        message={
+          <div>
+            <p>
+              Do you want to apply deduction/addition based on the new times?
+            </p>
+            <ul>
+              <li>
+                <b>Yes:</b> Adjustment will be added to the adjustments table.
+              </li>
+              <li>
+                <b>No:</b> Only the times will be saved without any financial
+                adjustment.
+              </li>
+            </ul>
+          </div>
+        }
+        onConfirm={() => confirmEditSave(true)}
+        confirmText="Save with Adjustment"
+        onSecondaryAction={() => confirmEditSave(false)}
+        secondaryText="Save without Adjustment"
+        onClose={() => setIsConfirmModalVisible(false)}
+      />
     </div>
   );
 };
