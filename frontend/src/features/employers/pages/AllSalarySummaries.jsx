@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { getAllSalarySummaries } from "../services/salaryService";
@@ -25,7 +25,7 @@ const AllSalarySummaries = () => {
   const [selectedYear, setSelectedYear] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const itemsPerPage = 10;
   const [salarySummaries, setSalarySummaries] = useState([]);
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -58,29 +58,19 @@ const AllSalarySummaries = () => {
       navigate("/login");
       return;
     }
-  }, [navigate]);
+    fetchData();
+  }, []);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await getAllSalarySummaries(
-        currentPage,
-        searchTerm,
-        sortBy,
-        sortDirection,
-        selectedMonth,
-        selectedYear,
-        "", // department_id - assuming not used for now
-        itemsPerPage
-      );
-
+      const response = await getAllSalarySummaries();
       if (response.status === "success") {
         setSalarySummaries(response.data.summaries || []);
         setTotalItems(response.data.total || 0);
         setTotalPages(response.data.last_page || 1);
-        setCurrentPage(response.data.current_page || 1);
       } else {
         throw new Error(response.message || "Failed to fetch data");
       }
@@ -91,19 +81,7 @@ const AllSalarySummaries = () => {
     } finally {
       setLoading(false);
     }
-  }, [
-    currentPage,
-    searchTerm,
-    sortBy,
-    sortDirection,
-    selectedMonth,
-    selectedYear,
-    itemsPerPage,
-  ]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  };
 
   const handleSort = (column) => {
     if (sortBy === column) {
@@ -112,7 +90,6 @@ const AllSalarySummaries = () => {
       setSortBy(column);
       setSortDirection("asc");
     }
-    setCurrentPage(1);
   };
 
   const formatNumber = (number) => {
@@ -122,6 +99,66 @@ const AllSalarySummaries = () => {
       return num.toString();
     }
     return round(num).toString();
+  };
+
+  const calculateAbsentDeduction = (baseSalary, absentDays, year, month) => {
+    const monthIndex = getMonthIndex(month);
+    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+    const dailyRate = Number(baseSalary) / daysInMonth;
+    return round(dailyRate * Number(absentDays), 0);
+  };
+
+  const calculateFinalSalary = (summary) => {
+    const baseSalary = Number(summary.base_salary) || 0;
+    const totalAdditions = Number(summary.total_additions) || 0;
+    const totalDeductions = Number(summary.total_deductions) || 0;
+    const absentDeduction = Number(summary.absent_deduction) || 0;
+
+    return round(
+      baseSalary + totalAdditions - totalDeductions - absentDeduction
+    );
+  };
+
+  const getUniqueMonthlyRecords = (summaries) => {
+    if (!Array.isArray(summaries)) {
+      console.error("summaries is not an array:", summaries);
+      return [];
+    }
+
+    const groupedByEmployeeAndMonth = summaries.reduce((acc, summary) => {
+      if (!summary || !summary.full_name || !summary.year || !summary.month) {
+        console.warn("Invalid summary record:", summary);
+        return acc;
+      }
+
+      const key = `${summary.full_name}-${summary.year}-${summary.month}`;
+      if (!acc[key]) {
+        acc[key] = {
+          ...summary,
+          final_salary: calculateFinalSalary(summary),
+        };
+      } else {
+        acc[key] = {
+          ...acc[key],
+          attendance_days: summary.attendance_days || acc[key].attendance_days,
+          absent_days: summary.absent_days || acc[key].absent_days,
+          additions_hours: summary.additions_hours || acc[key].additions_hours,
+          deductions_hours:
+            summary.deductions_hours || acc[key].deductions_hours,
+          total_additions: summary.total_additions || acc[key].total_additions,
+          total_deductions:
+            summary.total_deductions || acc[key].total_deductions,
+          final_salary: calculateFinalSalary(summary),
+        };
+      }
+      return acc;
+    }, {});
+
+    return Object.values(groupedByEmployeeAndMonth).sort((a, b) => {
+      const dateA = new Date(a.year, getMonthIndex(a.month));
+      const dateB = new Date(b.year, getMonthIndex(b.month));
+      return dateB - dateA;
+    });
   };
 
   const getMonthIndex = (monthName) => {
@@ -146,6 +183,31 @@ const AllSalarySummaries = () => {
     const monthIndex = getMonthIndex(monthName);
     return new Date(year, monthIndex + 1, 0).getDate();
   };
+
+  const filteredSummaries = salarySummaries
+    .filter((summary) => {
+      const matchesMonth = !selectedMonth || summary.month === selectedMonth;
+      const matchesYear =
+        !selectedYear || summary.year === parseInt(selectedYear);
+      const matchesSearch =
+        !searchTerm ||
+        summary.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        summary.month.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        summary.year.toString().includes(searchTerm);
+      return matchesMonth && matchesYear && matchesSearch;
+    })
+    .sort((a, b) => {
+      if (a[sortBy] < b[sortBy]) return sortDirection === "asc" ? -1 : 1;
+      if (a[sortBy] > b[sortBy]) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+
+  const uniqueMonthlySummaries = getUniqueMonthlyRecords(filteredSummaries);
+
+  const paginatedSummaries = uniqueMonthlySummaries.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
@@ -182,9 +244,11 @@ const AllSalarySummaries = () => {
           <div class="summary">
             <div style="display: flex; justify-content: space-between;">
               <div>
-                <p><strong>Total Records:</strong> ${totalItems}</p>
+                <p><strong>Total Records:</strong> ${
+                  uniqueMonthlySummaries.length
+                }</p>
                 <p><strong>Total Additions:</strong> ${formatNumber(
-                  salarySummaries.reduce(
+                  uniqueMonthlySummaries.reduce(
                     (sum, item) => sum + (Number(item.total_additions) || 0),
                     0
                   )
@@ -192,13 +256,13 @@ const AllSalarySummaries = () => {
               </div>
               <div>
                 <p><strong>Total Deductions:</strong> ${formatNumber(
-                  salarySummaries.reduce(
+                  uniqueMonthlySummaries.reduce(
                     (sum, item) => sum + (Number(item.total_deductions) || 0),
                     0
                   )
                 )} EGP</p>
                 <p><strong>Total Final Salary:</strong> ${formatNumber(
-                  salarySummaries.reduce(
+                  uniqueMonthlySummaries.reduce(
                     (sum, item) => sum + (Number(item.final_salary) || 0),
                     0
                   )
@@ -216,24 +280,31 @@ const AllSalarySummaries = () => {
                 <th>Base Salary</th>
                 <th>Attendance</th>
                 <th>Absent</th>
-                
+                <th>Absent Deduction</th>
                 <th>Additions</th>
                 <th> Deductions</th>
                 <th>Final Salary</th>
               </tr>
             </thead>
             <tbody>
-              ${salarySummaries
+              ${paginatedSummaries
                 .map(
                   (summary) => `
                 <tr>
-                  <td>${summary.employer.full_name}</td>
+                  <td>${summary.full_name}</td>
                   <td>${summary.month}</td>
                   <td>${summary.year}</td>
-                  <td>${formatNumber(summary.employer.salary)} EGP</td>
+                  <td>${formatNumber(summary.base_salary)} EGP</td>
                   <td>${summary.attendance_days || 0} days</td>
                   <td>${summary.absent_days || 0} days</td>
-                  <td>-${formatNumber(summary.absent_deduction)} EGP</td>
+                  <td>-${formatNumber(
+                    calculateAbsentDeduction(
+                      summary.base_salary,
+                      summary.absent_days,
+                      summary.year,
+                      summary.month
+                    )
+                  )} EGP</td>
                   <td>+${formatNumber(summary.total_additions)} EGP</td>
                   <td>-${formatNumber(summary.total_deductions)} EGP</td>
                   <td>${formatNumber(summary.final_salary)} EGP</td>
@@ -264,7 +335,7 @@ const AllSalarySummaries = () => {
       "Base Salary",
       "Attendance Days",
       "Absent Days",
-      // "Absent Deduction",
+      "Absent Deduction",
       "Additional Hours",
       "Deduction Hours",
       "Total Additions",
@@ -272,14 +343,19 @@ const AllSalarySummaries = () => {
       "Final Salary",
     ];
 
-    const csvData = salarySummaries.map((summary) => [
-      `"${summary.employer.full_name}"`,
+    const csvData = paginatedSummaries.map((summary) => [
+      `"${summary.full_name}"`,
       summary.month,
       summary.year,
-      summary.employer.salary || 0,
+      summary.base_salary || 0,
       summary.attendance_days || 0,
       summary.absent_days || 0,
-      summary.absent_deduction || 0,
+      calculateAbsentDeduction(
+        summary.base_salary,
+        summary.absent_days,
+        summary.year,
+        summary.month
+      ) || 0,
       summary.additions_hours || 0,
       summary.deductions_hours || 0,
       summary.total_additions || 0,
@@ -350,6 +426,7 @@ const AllSalarySummaries = () => {
       </div>
     );
   }
+  
 
   return (
     <div className="container-fluid py-4">
@@ -441,19 +518,13 @@ const AllSalarySummaries = () => {
                               className="form-control"
                               placeholder="Search by name, month or year..."
                               value={searchTerm}
-                              onChange={(e) => {
-                                setSearchTerm(e.target.value);
-                                setCurrentPage(1);
-                              }}
+                              onChange={(e) => setSearchTerm(e.target.value)}
                             />
                             {searchTerm && (
                               <button
                                 className="btn btn-outline-secondary"
                                 type="button"
-                                onClick={() => {
-                                  setSearchTerm("");
-                                  setCurrentPage(1);
-                                }}
+                                onClick={() => setSearchTerm("")}
                               >
                                 Clear
                               </button>
@@ -483,7 +554,9 @@ const AllSalarySummaries = () => {
                             <small className="text-muted d-block">
                               Total Records
                             </small>
-                            <span className="fw-semibold">{totalItems}</span>
+                            <span className="fw-semibold">
+                              {filteredSummaries.length}
+                            </span>
                           </div>
                         </div>
                         <div className="d-flex align-items-center me-3 mb-2 mb-md-0">
@@ -499,7 +572,7 @@ const AllSalarySummaries = () => {
                             </small>
                             <span className="fw-semibold">
                               {calculateTotal(
-                                salarySummaries,
+                                paginatedSummaries,
                                 "total_additions"
                               )}{" "}
                               EGP
@@ -515,11 +588,11 @@ const AllSalarySummaries = () => {
                           </div>
                           <div>
                             <small className="text-muted d-block">
-                              Deductions
+                               Deductions
                             </small>
                             <span className="fw-semibold">
                               {calculateTotal(
-                                salarySummaries,
+                                paginatedSummaries,
                                 "total_deductions"
                               )}{" "}
                               EGP
@@ -538,7 +611,10 @@ const AllSalarySummaries = () => {
                               Total Final Salary
                             </small>
                             <span className="fw-semibold">
-                              {calculateTotal(salarySummaries, "final_salary")}{" "}
+                              {calculateTotal(
+                                paginatedSummaries,
+                                "final_salary"
+                              )}{" "}
                               EGP
                             </span>
                           </div>
@@ -610,26 +686,26 @@ const AllSalarySummaries = () => {
                           <th className="text-end">Base Salary</th>
                           <th className="text-center">Attendance</th>
                           <th className="text-center">Absent</th>
+                          <th className="text-end">Absent Deduction</th>
                           <th className="text-end">Additions</th>
                           <th className="text-end"> Deductions</th>
                           <th className="text-end pe-4">Final Salary</th>
                         </tr>
                       </thead>
                       <tbody id="printable-content">
-                        {salarySummaries.length > 0 ? (
-                          salarySummaries.map((summary) => (
+                        {paginatedSummaries.length > 0 ? (
+                          paginatedSummaries.map((summary) => (
                             <tr
                               key={`${summary.employer_id}-${summary.year}-${summary.month}`}
                             >
                               <td className="ps-4 fw-semibold">
-                                {summary.employer.full_name}
+                                {summary.full_name}
                               </td>
                               <td>{summary.month}</td>
                               <td>{summary.year}</td>
                               <td className="text-end">
                                 <span className="badge bg-secondary bg-opacity-10 text-secondary">
-                                  {summary.employer.salary?.toLocaleString() ||
-                                    0}{" "}
+                                  {summary.base_salary?.toLocaleString() || 0}{" "}
                                   EGP
                                 </span>
                               </td>
@@ -642,6 +718,16 @@ const AllSalarySummaries = () => {
                                 <span className="badge bg-danger bg-opacity-10 text-danger">
                                   {summary.absent_days || 0} days
                                 </span>
+                              </td>
+                              <td className="text-end text-danger fw-semibold">
+                                -
+                                {calculateAbsentDeduction(
+                                  summary.base_salary,
+                                  summary.absent_days,
+                                  summary.year,
+                                  summary.month
+                                ).toLocaleString()}{" "}
+                                EGP
                               </td>
                               <td className="text-end text-success fw-semibold">
                                 +
@@ -656,8 +742,8 @@ const AllSalarySummaries = () => {
                               </td>
                               <td className="text-end pe-4">
                                 <span className="badge bg-primary bg-opacity-10 text-primary fw-semibold">
-                                  {Number(
-                                    summary.final_salary
+                                  {calculateFinalSalary(
+                                    summary
                                   ).toLocaleString()}{" "}
                                   EGP
                                 </span>
@@ -694,8 +780,11 @@ const AllSalarySummaries = () => {
                 <div className="d-flex justify-content-between align-items-center">
                   <div className="text-muted small">
                     Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-                    {Math.min(currentPage * itemsPerPage, totalItems)} of{" "}
-                    {totalItems} records
+                    {Math.min(
+                      currentPage * itemsPerPage,
+                      paginatedSummaries.length
+                    )}{" "}
+                    of {paginatedSummaries.length} records
                   </div>
                   <nav>
                     <ul className="pagination pagination-sm mb-0">
@@ -742,29 +831,6 @@ const AllSalarySummaries = () => {
                       </li>
                     </ul>
                   </nav>
-                  <div className="d-flex align-items-center">
-                    <label
-                      htmlFor="itemsPerPage"
-                      className="form-label me-2 mb-0 small"
-                    >
-                      Items
-                    </label>
-                    <select
-                      id="itemsPerPage"
-                      className="form-select form-select-sm"
-                      style={{ width: "70px" }}
-                      value={itemsPerPage}
-                      onChange={(e) => {
-                        setItemsPerPage(Number(e.target.value));
-                        setCurrentPage(1);
-                      }}
-                    >
-                      <option value="10">10</option>
-                      <option value="25">25</option>
-                      <option value="50">50</option>
-                      <option value="100">100</option>
-                    </select>
-                  </div>
                 </div>
               )}
             </div>

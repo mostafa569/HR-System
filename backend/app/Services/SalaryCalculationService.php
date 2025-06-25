@@ -17,94 +17,72 @@ class SalaryCalculationService
     {
         try {
             DB::beginTransaction();
-    
+
             $year = $year ?? Carbon::now()->year;
             $month = $month ?? Carbon::now()->month;
-    
-            Log::info("Starting salary calculation for employer $employerId, $year-$month");
-    
+
             $employer = $this->getEmployer($employerId);
-            if (!$employer) {
-                throw new \Exception("Employer not found");
-            }
-    
             $baseSalary = $employer->salary;
-            if (!$baseSalary || $baseSalary <= 0) {
-                throw new \Exception("Invalid base salary for employer");
-            }
-    
+
             $dateRange = $this->getDateRange($year, $month);
+            // $daysInMonth = $dateRange['startDate']->daysInMonth;
             $daysInMonth = 30;
-    
+
             $holidays = $this->getHolidays($dateRange['startDate'], $dateRange['endDate']);
-            $holidaysCount = $holidays->count();
-    
             $workingHoursPerDay = $this->calculateWorkingHoursPerDay($employer);
-            if ($workingHoursPerDay <= 0) {
-                throw new \Exception("Invalid working hours calculation");
-            }
-    
             $hourlyRate = $this->calculateHourlyRate($baseSalary, $daysInMonth, $workingHoursPerDay);
+
             $attendanceDays = $this->getAttendanceDays($employerId, $dateRange);
-            $absentDays = $this->calculateAbsentDays($daysInMonth, $holidaysCount, $attendanceDays);
-    
+            $absentDays = $this->calculateAbsentDays($daysInMonth, $holidays->count(), $attendanceDays);
+
             $adjustments = $this->getAdjustments($employerId, $dateRange);
             $adjustmentCalculations = $this->calculateAdjustments($adjustments, $hourlyRate);
-    
-            $salaryCalculations = $this->calculateFinalSalary(
-                $baseSalary, 
-                $attendanceDays, 
-                $absentDays, 
-                $adjustmentCalculations, 
-                $workingHoursPerDay,
-                $hourlyRate
-            );
-    
+
+            $salaryCalculations = $this->calculateFinalSalary($baseSalary, $daysInMonth, $absentDays, $adjustmentCalculations);
+
+            $data = [
+                'attendance_days' => $attendanceDays,
+                'absent_days' => $absentDays,
+                'additions_hours' => $adjustmentCalculations['additions_hours'],
+                'deductions_hours' => $adjustmentCalculations['deductions_hours'],
+                'total_additions' => $adjustmentCalculations['total_additions'],
+                'total_deductions' => $adjustmentCalculations['total_deductions'],
+                'final_salary' => $salaryCalculations['final_salary'],
+            ];
+            
             $this->saveSalarySummary($employerId, $year, $month, $dateRange, $attendanceDays, $absentDays, $adjustmentCalculations, $salaryCalculations);
-    
+
             DB::commit();
-    
-            return $this->formatSalaryResponse(
-                $employerId, 
-                $year, 
-                $month, 
-                $dateRange, 
-                $daysInMonth, 
-                $baseSalary, 
-                $hourlyRate, 
-                $attendanceDays, 
-                $absentDays, 
-                $adjustmentCalculations, 
-                $salaryCalculations, 
-                $workingHoursPerDay
-            );
-    
+             
+            return $this->formatSalaryResponse($employerId, $year, $month, $dateRange, $daysInMonth, $baseSalary, $hourlyRate, $attendanceDays, $absentDays, $adjustmentCalculations, $salaryCalculations, $workingHoursPerDay);
+
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Salary calculation failed: ' . $e->getMessage());
-            Log::error($e->getTraceAsString());
-            throw new \Exception("Salary calculation failed: " . $e->getMessage());
+            throw $e;
         }
     }
 
     protected function calculateWorkingHoursPerDay($employer)
-    {
-        if (!$employer->attendance_time || !$employer->leave_time) {
-            return 8;  
-        }
-    
-        $attendance = Carbon::createFromTimeString($employer->attendance_time);
-        $leave = Carbon::createFromTimeString($employer->leave_time);
-    
-        $workingHours = abs($leave->diffInHours($attendance));
-    
-        if ($workingHours > 12) {
-            $workingHours = 24 - $workingHours;
-        }
-
-        return $workingHours;
+{
+    if (!$employer->attendance_time || !$employer->leave_time) {
+        return 8;  
     }
 
+     
+    $attendance = Carbon::createFromTimeString($employer->attendance_time);
+    $leave = Carbon::createFromTimeString($employer->leave_time);
+
+     
+    $workingHours = abs($leave->diffInHours($attendance));
+
+     
+    if ($workingHours > 12) {
+        $workingHours = 24 - $workingHours;
+    }
+
+    return $workingHours;
+}
     protected function getEmployer($employerId)
     {
         return Employer::findOrFail($employerId);
@@ -122,12 +100,11 @@ class SalaryCalculationService
     protected function getHolidays($startDate, $endDate)
     {
         return Holiday::where(function($query) use ($startDate, $endDate) {
-            $query->where('type', 'weekly')->whereNotNull('day')
-                  ->whereBetween('date', [$startDate, $endDate]);
+            $query->where('type', 'weekly')->whereNotNull('day');
             $query->orWhere(function($q) use ($startDate, $endDate) {
                 $q->where('type', 'official')
-                  ->whereNotNull('date')
-                  ->whereBetween('date', [$startDate, $endDate]);
+                   ->whereNotNull('date')
+                   ->whereBetween('date', [$startDate, $endDate]);
             });
         })->get();
     }
@@ -164,12 +141,13 @@ class SalaryCalculationService
             if ($value <= 0) continue;
 
             if ($adjustment->value_type === 'hours') {
+                $monetaryValue = $value * $hourlyRate;
                 if ($adjustment->kind === 'addition') {
                     $additionsHours += $value;
-                    $totalAdditions += $value * $hourlyRate;
+                    $totalAdditions += $monetaryValue;
                 } else if ($adjustment->kind === 'deduction') {
                     $deductionsHours += $value;
-                    $totalDeductions += $value * $hourlyRate;
+                    $totalDeductions += $monetaryValue;
                 }
             } else if ($adjustment->value_type === 'money') {
                 if ($adjustment->kind === 'addition') {
@@ -179,6 +157,9 @@ class SalaryCalculationService
                 }
             }
         }
+
+       
+        // $totalAdditions += ($additionsHours * $hourlyRate);
 
         return [
             'additions_hours' => round($additionsHours, 2),
@@ -193,22 +174,15 @@ class SalaryCalculationService
         return $baseSalary / ($daysInMonth * $workingHoursPerDay);
     }
 
-    protected function calculateFinalSalary($baseSalary, $attendanceDays, $absentDays, $adjustmentCalculations, $workingHoursPerDay, $hourlyRate)
+    protected function calculateFinalSalary($baseSalary, $daysInMonth, $absentDays, $adjustmentCalculations)
     {
-        // Calculate absent deduction based on hours
-        $absentHours = $absentDays * $workingHoursPerDay;
-        $absentDeduction = $absentHours * $hourlyRate;
+        $dailySalary = $baseSalary / $daysInMonth;
+        $absentDeduction = $absentDays * $dailySalary;
         
-        // Calculate salary based on actual working hours
-        $workedHours = $attendanceDays * $workingHoursPerDay;
-        $workedSalary = $workedHours * $hourlyRate;
-        
-        // Apply adjustments
-        $finalSalary = max(0, $workedSalary + $adjustmentCalculations['total_additions'] - $adjustmentCalculations['total_deductions']);
+        $finalSalary = max(0, $baseSalary - $absentDeduction + $adjustmentCalculations['total_additions'] - $adjustmentCalculations['total_deductions']);
 
         return [
             'base_salary' => round($baseSalary, 2),
-            'worked_salary' => round($workedSalary, 2),
             'absent_deduction' => round($absentDeduction, 2),
             'final_salary' => round($finalSalary, 2)
         ];
@@ -216,8 +190,10 @@ class SalaryCalculationService
 
     protected function saveSalarySummary($employerId, $year, $month, $dateRange, $attendanceDays, $absentDays, $adjustmentCalculations, $salaryCalculations)
     {
+         
         $monthName = Carbon::create()->month($month)->format('F');
     
+         
         $existingSummary = SalarySummary::where('employer_id', $employerId)
             ->where('year', $year)
             ->where('month', $monthName)
@@ -233,14 +209,14 @@ class SalaryCalculationService
             'deductions_hours' => $adjustmentCalculations['deductions_hours'],
             'total_additions' => $adjustmentCalculations['total_additions'],
             'total_deductions' => $adjustmentCalculations['total_deductions'],
-            'final_salary' => $salaryCalculations['final_salary']
+            'final_salary' => $salaryCalculations['final_salary'],
         ];
     
         if ($existingSummary) {
             $existingSummary->update($data);
             return $existingSummary;
         }
-
+    
         return SalarySummary::create($data);
     }
 
@@ -261,7 +237,6 @@ class SalaryCalculationService
             'total_additions' => $adjustmentCalculations['total_additions'],
             'total_deductions' => $adjustmentCalculations['total_deductions'],
             'absent_deduction' => $salaryCalculations['absent_deduction'],
-            'worked_salary' => $salaryCalculations['worked_salary'],
             'final_salary' => $salaryCalculations['final_salary'],
         ];
     }

@@ -145,6 +145,7 @@ const SalarySummary = () => {
         "Deductions Hours",
         "Total Additions",
         "Deductions",
+        "Absent Deduction",
         "Final Salary",
       ];
 
@@ -388,7 +389,7 @@ const SalarySummary = () => {
                                 hours
                               </span>
                             </div>
-                            {/* <div className="d-flex justify-content-between py-2">
+                            <div className="d-flex justify-content-between py-2">
                               <span className="text-muted">
                                 Absent Deduction:
                               </span>
@@ -398,7 +399,7 @@ const SalarySummary = () => {
                                   "0"}{" "}
                                 EGP
                               </span>
-                            </div> */}
+                            </div>
                           </div>
                           <div className="d-flex justify-content-between mt-3 pt-2 border-top">
                             <span className="fw-bold">Final Salary:</span>
@@ -498,7 +499,7 @@ const SalarySummary = () => {
                           <th className="text-center">Overtime</th>
                           <th className="text-center">Deduction Hours</th>
                           <th className="text-end">Additions</th>
-                          {/* <th className="text-end">Absent Deduction</th> */}
+                          <th className="text-end">Absent Deduction</th>
                           <th className="text-end"> Deductions</th>
                           <th className="text-end pe-4">Final Salary</th>
                         </tr>
@@ -542,12 +543,12 @@ const SalarySummary = () => {
                                 {summary.total_additions?.toLocaleString() || 0}{" "}
                                 EGP
                               </td>
-                              {/* <td className="text-end text-danger fw-semibold">
+                              <td className="text-end text-danger fw-semibold">
                                 -
                                 {summary.absent_deduction?.toLocaleString() ||
                                   0}{" "}
                                 EGP
-                              </td> */}
+                              </td>
                               <td className="text-end text-danger fw-semibold">
                                 -
                                 {summary.total_deductions?.toLocaleString() ||
