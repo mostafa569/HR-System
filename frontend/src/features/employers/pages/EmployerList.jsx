@@ -6,8 +6,9 @@ import {
   deleteEmployer,
   attendEmployer,
   leaveEmployer,
-  getDepartments
+  getDepartments,
 } from "../services/employerService";
+import { calculateSalarySummary } from "../services/salaryService";
 import {
   FiEdit2,
   FiTrash2,
@@ -44,6 +45,14 @@ const EmployerList = () => {
   const [totalPages, setTotalPages] = useState(1);
   const navigate = useNavigate();
 
+  const getMonthName = (monthNumber) => {
+    const months = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+    return months[monthNumber - 1] || "";
+  };
+
   function debounce(func, wait) {
     let timeout;
     return (...args) => {
@@ -56,10 +65,11 @@ const EmployerList = () => {
     const fetchAllDepartments = async () => {
       try {
         const response = await getDepartments();
-        setAllDepartments(response);
+        setAllDepartments(Array.isArray(response.data) ? response.data : []);
       } catch (error) {
         console.error("Error fetching departments:", error);
         toast.error("Failed to fetch departments", { theme: "colored" });
+        setAllDepartments([]);
       }
     };
     fetchAllDepartments();
@@ -70,65 +80,44 @@ const EmployerList = () => {
       try {
         setLoading(true);
         const response = await getEmployers(page, dept, query, sort, direction);
-        
-        if (response && response.data && Array.isArray(response.data)) {
-          const transformedResponse = {
+        if (response?.data && Array.isArray(response.data)) {
+          setEmployers({
             data: response.data,
             total: response.total || 0,
             current_page: response.current_page || 1,
             last_page: response.last_page || 1,
-          };
-          setEmployers(transformedResponse);
-          setTotalPages(transformedResponse.last_page);
+          });
+          setTotalPages(response.last_page || 1);
         } else {
-          console.error("Invalid response format:", response);
           toast.error("Invalid response from server", { theme: "colored" });
         }
       } catch (error) {
         console.error("Error fetching employers:", error);
-        toast.error("Failed to fetch employers", { theme: "colored" });
+        if (error.response?.status === 401) {
+          toast.error("Please login to continue", { theme: "colored" });
+          navigate("/login");
+        } else {
+          toast.error(error.message || "Failed to fetch employers", { theme: "colored" });
+        }
       } finally {
         setLoading(false);
       }
     }, 500),
-    []
+    [navigate]
   );
 
   useEffect(() => {
     setCurrentPage(1);
-    debouncedFetchEmployers(
-      1,
-      departmentFilter,
-      searchQuery,
-      sortField,
-      sortDirection
-    );
-  }, [
-    searchQuery,
-    departmentFilter,
-    debouncedFetchEmployers,
-    sortField,
-    sortDirection,
-  ]);
+    debouncedFetchEmployers(1, departmentFilter, searchQuery, sortField, sortDirection);
+  }, [searchQuery, departmentFilter, sortField, sortDirection, debouncedFetchEmployers]);
 
   useEffect(() => {
-    debouncedFetchEmployers(
-      currentPage,
-      departmentFilter,
-      searchQuery,
-      sortField,
-      sortDirection
-    );
-  }, [currentPage, sortField, sortDirection, debouncedFetchEmployers]);
+    debouncedFetchEmployers(currentPage, departmentFilter, searchQuery, sortField, sortDirection);
+  }, [currentPage, debouncedFetchEmployers]);
 
-  const handleSearchChange = (e) => {
-    const value = e.target.value.trim();
-    setSearchQuery(value);
-  };
-
+  const handleSearchChange = (e) => setSearchQuery(e.target.value.trim());
   const handleDepartmentFilterChange = (e) => {
-    const value = e.target.value;
-    setDepartmentFilter(value);
+    setDepartmentFilter(e.target.value);
     setCurrentPage(1);
   };
 
@@ -137,13 +126,7 @@ const EmployerList = () => {
       try {
         await deleteEmployer(id);
         toast.success("Employer deleted successfully", { theme: "colored" });
-        debouncedFetchEmployers(
-          currentPage,
-          departmentFilter,
-          searchQuery,
-          sortField,
-          sortDirection
-        );
+        debouncedFetchEmployers(currentPage, departmentFilter, searchQuery, sortField, sortDirection);
       } catch (error) {
         toast.error("Failed to delete employer", { theme: "colored" });
       }
@@ -154,18 +137,9 @@ const EmployerList = () => {
     try {
       await attendEmployer(id);
       toast.success("Attendance marked successfully", { theme: "colored" });
-      debouncedFetchEmployers(
-        currentPage,
-        departmentFilter,
-        searchQuery,
-        sortField,
-        sortDirection
-      );
+      debouncedFetchEmployers(currentPage, departmentFilter, searchQuery, sortField, sortDirection);
     } catch (error) {
-      toast.error(
-        error.response?.data?.message || "Failed to mark attendance",
-        { theme: "colored" }
-      );
+      toast.error(error.response?.data?.message || "Failed to mark attendance", { theme: "colored" });
     }
   };
 
@@ -173,71 +147,35 @@ const EmployerList = () => {
     try {
       await leaveEmployer(id);
       toast.success("Leave marked successfully", { theme: "colored" });
-      debouncedFetchEmployers(
-        currentPage,
-        departmentFilter,
-        searchQuery,
-        sortField,
-        sortDirection
-      );
+      debouncedFetchEmployers(currentPage, departmentFilter, searchQuery, sortField, sortDirection);
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to mark leave", {
-        theme: "colored",
-      });
+      toast.error(error.response?.data?.message || "Failed to mark leave", { theme: "colored" });
     }
   };
 
   const handleSort = (field) => {
-    const newDirection =
-      sortField === field && sortDirection === "asc" ? "desc" : "asc";
     setSortField(field);
-    setSortDirection(newDirection);
+    setSortDirection(sortField === field && sortDirection === "asc" ? "desc" : "asc");
     setCurrentPage(1);
   };
 
   const getEmptyStateMessage = () => {
-    if (searchQuery && departmentFilter) {
-      return "No employees found matching your search criteria and department filter.";
-    } else if (searchQuery) {
-      return "No employees found matching your search criteria.";
-    } else if (departmentFilter) {
-      return `No employees found in the ${departmentFilter} department.`;
-    }
-    return "There are currently no employees in the system.";
+    if (searchQuery && departmentFilter) return "No employees found matching your search and department.";
+    if (searchQuery) return "No employees found matching your search.";
+    if (departmentFilter) return `No employees in the ${departmentFilter} department.`;
+    return "No employees in the system.";
   };
 
-  const handlePreviousPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
-
-  const goToPage = (page) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
+  const handlePreviousPage = () => currentPage > 1 && setCurrentPage(currentPage - 1);
+  const handleNextPage = () => currentPage < totalPages && setCurrentPage(currentPage + 1);
+  const goToPage = (page) => page >= 1 && page <= totalPages && setCurrentPage(page);
 
   const getPageNumbers = () => {
-    const pages = [];
     const showPages = 5;
     let start = Math.max(1, currentPage - Math.floor(showPages / 2));
     let end = Math.min(totalPages, start + showPages - 1);
-
-    if (end - start + 1 < showPages) {
-      start = Math.max(1, end - showPages + 1);
-    }
-
-    for (let i = start; i <= end; i++) {
-      pages.push(i);
-    }
-    return pages;
+    if (end - start + 1 < showPages) start = Math.max(1, end - showPages + 1);
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
   };
 
   const handleResetFilters = () => {
@@ -252,507 +190,420 @@ const EmployerList = () => {
     <div className="min-vh-100 py-4 bg-gray-50">
       <style>
         {`
+          :root {
+            --primary: #667eea;
+            --primary-dark: #764ba2;
+            --secondary: #64748b;
+            --border: #e2e8f0;
+            --bg-light: #f8fafc;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 20px rgba(0,0,0,0.08);
+          }
+
+          * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+          }
+
           @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
+            from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
           }
 
           .card-main {
             animation: fadeIn 0.5s ease-out;
             border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            border: none;
-            overflow: hidden;
+            box-shadow: var(--shadow-md);
             background: white;
+            margin: 0 1rem;
           }
 
           .header-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
-            padding: 1.5rem 2rem;
+            padding: 1.5rem;
             position: relative;
             overflow: hidden;
           }
 
-          .header-card::before {
-            content: "";
-            position: absolute;
-            top: -50%;
-            right: -30%;
-            width: 120%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 60%);
-            animation: float 15s ease-in-out infinite;
-          }
-
-          @keyframes float {
-            0%, 100% { transform: translate(0, 0) rotate(0deg); }
-            50% { transform: translate(-20px, -10px) rotate(5deg); }
-          }
-
           .header-content {
-            position: relative;
-            z-index: 1;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 2rem;
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
-            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+            justify-content: space-between;
           }
 
           .header-left {
             display: flex;
             align-items: center;
+            gap: 1rem;
             flex: 1;
-            justify-content: flex-start;
-            max-width: 50%;
+            min-width: 200px;
           }
 
           .header-right {
-            display: flex;
-            align-items: center;
             flex: 1;
+            display: flex;
             justify-content: flex-end;
-            max-width: 50%;
           }
 
           .header-icon {
             background: rgba(255,255,255,0.2);
-            width: 48px;
-            height: 48px;
-            border-radius: 10px;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-right: 1rem;
-            margin-left: 0;
-            backdrop-filter: blur(10px);
+            flex-shrink: 0;
           }
 
           .header-title {
-            font-size: 1.75rem;
+            font-size: clamp(1.5rem, 4vw, 1.75rem);
             font-weight: 700;
-            margin-bottom: 0.25rem;
-            text-shadow: 0 1px 3px rgba(255, 255, 255, 0.2);
-            text-align: left;
+            margin: 0;
           }
 
           .header-subtitle {
-            font-size: 0.9rem;
+            font-size: clamp(0.85rem, 2vw, 0.95rem);
             opacity: 0.9;
-            line-height: 1.4;
             margin: 0;
-            text-align: left;
           }
 
           .btn-primary-gradient {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             border: none;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-            transition: all 0.3s ease;
-            padding: 0.6rem 1.2rem;
-            font-size: 0.9rem;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.95rem;
             font-weight: 600;
-            border-radius: 10px;
+            border-radius: 8px;
             color: white;
-            white-space: nowrap;
-            width: 100%;
-            max-width: 200px;
-          }
-
-          .btn-primary-gradient:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 25px rgba(102, 126, 234, 0.5);
-            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-            color: white;
-          }
-
-          .search-input {
-            border-radius: 10px;
-            height: 48px;
-            border: 2px solid #e5e7eb;
-            padding: 0.75rem 1rem;
             transition: all 0.3s ease;
-            font-size: 0.95rem;
-            background: white;
-          }
-
-          .search-input:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-            outline: none;
-            transform: translateY(-1px);
-          }
-
-          .search-prepend {
-            background-color: #f8fafc;
-            border-radius: 10px 0 0 10px;
-            height: 48px;
-            display: flex;
-            align-items: center;
-            padding: 0 1rem;
-            border: 2px solid #e5e7eb;
-            border-right: none;
-            transition: all 0.3s ease;
-          }
-
-          .search-input:focus + .search-prepend,
-          .input-group:focus-within .search-prepend {
-            border-color: #667eea;
-            background-color: #f0f4ff;
-          }
-
-          .filter-card {
-            background: white;
-            border-radius: 12px;
-            padding: 2rem;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-            border: 1px solid #f1f5f9;
-          }
-
-          .table-card {
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-            border: 1px solid #f1f5f9;
-          }
-
-          .table-header {
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            color: #475569;
-            font-weight: 700;
-            text-transform: uppercase;
-            font-size: 0.8rem;
-            letter-spacing: 0.5px;
-            border-bottom: 2px solid #e2e8f0;
-          }
-
-          .table-row {
-            transition: all 0.2s ease;
-            border-bottom: 1px solid #f1f5f9;
-          }
-
-          .table-row:hover {
-            background: linear-gradient(135deg, #f8faff 0%, #f0f4ff 100%) !important;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
-          }
-
-          .sortable-header {
-            cursor: pointer;
-            transition: all 0.2s ease;
-            user-select: none;
-            padding: 1rem !important;
-          }
-
-          .sortable-header:hover {
-            color: #667eea;
-            background: rgba(102, 126, 234, 0.05);
-          }
-
-          .sort-icon {
-            margin-left: 8px;
-            transition: all 0.3s ease;
-            font-size: 1rem;
-            color: #94a3b8;
-          }
-
-          .sort-icon.active {
-            color: #667eea;
-            transform: scale(1.1);
-          }
-
-          .sort-icon.desc {
-            transform: rotate(180deg) scale(1.1);
-          }
-
-          .avatar {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            color: white;
-            margin-right: 15px;
-            font-size: 1.1rem;
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-          }
-
-          .action-btn {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            transition: all 0.3s ease;
-            margin: 0 3px;
-            border: none;
-            font-size: 1.1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-          }
-
-          .action-btn:hover {
-            transform: translateY(-2px) scale(1.05);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-          }
-
-          .action-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            transition: left 0.5s;
-          }
-
-          .action-btn:hover::before {
-            left: 100%;
-          }
-
-          /* Enhanced Pagination Styles */
-          .pagination-container {
-            background: white;
-            border-radius: 12px;
-            padding: 1.5rem 2rem;
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-            border: 1px solid #f1f5f9;
-            margin-top: 1.5rem;
-          }
-
-          .pagination-wrapper {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
-          }
-
-          .pagination-info {
-            color: #64748b;
-            font-size: 0.95rem;
-            font-weight: 500;
-          }
-
-          .pagination-controls {
             display: flex;
             align-items: center;
             gap: 0.5rem;
           }
 
-          .pagination-btn {
-            border-radius: 10px;
-            padding: 0.75rem 1.25rem;
-            font-weight: 600;
+          .btn-primary-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+          }
+
+          .search-input {
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            padding: 0.75rem;
+            font-size: 0.95rem;
             transition: all 0.3s ease;
-            border: 2px solid #e2e8f0;
             background: white;
-            color: #64748b;
+          }
+
+          .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            outline: none;
+          }
+
+          .search-prepend {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-right: none;
+            border-radius: 8px 0 0 8px;
+            padding: 0 0.75rem;
+            display: flex;
+            align-items: center;
+          }
+
+          .filter-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            box-shadow: var(--shadow-sm);
+          }
+
+          .table-card {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+          }
+
+          .table-header {
+            background: var(--bg-light);
+            color: var(--secondary);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+
+          .table-row {
+            transition: all 0.2s ease;
+            border-bottom: 1px solid var(--border);
+          }
+
+          .table-row:hover {
+            background: rgba(102, 126, 234, 0.05);
+            transform: translateY(-1px);
+          }
+
+          .sortable-header {
+            cursor: pointer;
+            transition: color 0.2s ease;
+            padding: 1rem;
+          }
+
+          .sortable-header:hover {
+            color: var(--primary);
+          }
+
+          .sort-icon {
+            margin-left: 0.5rem;
+            color: var(--secondary);
+            transition: all 0.3s ease;
+          }
+
+          .sort-icon.active {
+            color: var(--primary);
+          }
+
+          .sort-icon.desc {
+            transform: rotate(180deg);
+          }
+
+          .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+            flex-shrink: 0;
+          }
+
+          .action-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-light);
+          }
+
+          .action-btn:hover {
+            transform: scale(1.05);
+            box-shadow: var(--shadow-sm);
+          }
+
+          .pagination-container {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            box-shadow: var(--shadow-sm);
+          }
+
+          .pagination-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+            justify-content: space-between;
+          }
+
+          .pagination-info {
+            color: var(--secondary);
             font-size: 0.9rem;
+          }
+
+          .pagination-controls {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+          }
+
+          .pagination-btn {
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            font-weight: 600;
+            border: 1px solid var(--border);
+            background: white;
+            color: var(--secondary);
+            transition: all 0.3s ease;
             display: flex;
             align-items: center;
             gap: 0.5rem;
           }
 
           .pagination-btn:hover:not(:disabled) {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-color: #667eea;
+            background: var(--primary);
+            border-color: var(--primary);
             color: white;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
           }
 
           .pagination-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            background: #f8fafc;
-            color: #cbd5e1;
           }
 
           .page-number {
-            width: 42px;
-            height: 42px;
-            border-radius: 10px;
-            border: 2px solid #e2e8f0;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
             background: white;
-            color: #64748b;
+            color: var(--secondary);
             font-weight: 600;
-            font-size: 0.9rem;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             transition: all 0.3s ease;
-            margin: 0 2px;
           }
 
           .page-number:hover {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-color: #667eea;
+            background: var(--primary);
+            border-color: var(--primary);
             color: white;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
           }
 
           .page-number.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-color: #667eea;
+            background: var(--primary);
+            border-color: var(--primary);
             color: white;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-          }
-
-          .page-ellipsis {
-            padding: 0 0.5rem;
-            color: #94a3b8;
-            font-weight: 600;
           }
 
           .empty-state {
-            padding: 4rem 2rem;
+            padding: 3rem;
             text-align: center;
             background: white;
             border-radius: 12px;
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-            border: 1px solid #f1f5f9;
+            box-shadow: var(--shadow-sm);
           }
 
           .empty-icon {
-            font-size: 4rem;
-            color: #cbd5e1;
-            margin-bottom: 2rem;
+            font-size: 3rem;
+            color: var(--border);
+            margin-bottom: 1rem;
           }
 
           .table-icon {
-            color: #667eea;
-            font-size: 1.2rem;
-            margin-right: 0.75rem;
+            color: var(--primary);
+            font-size: 1rem;
+            margin-right: 0.5rem;
           }
 
-          .bg-indigo-100 {
-            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%) !important;
+          .bg-indigo-100 { background: #e0e7ff; }
+          .text-indigo-600 { color: #4f46e5; }
+          .bg-amber-100 { background: #fef3c7; }
+          .text-amber-600 { color: #d97706; }
+          .bg-cyan-100 { background: #cffafe; }
+          .text-cyan-600 { color: #0891b2; }
+          .bg-gray-100 { background: #f3f4f6; }
+          .text-gray-600 { color: #4b5563; }
+          .bg-red-100 { background: #fee2e2; }
+          .text-red-600 { color: #dc2626; }
+          .bg-green-100 { background: #d1fae5; }
+          .text-green-600 { color: #059669; }
+
+          .btn-outline-secondary {
+            border: 1px solid var(--border);
+            color: var(--secondary);
+            transition: all 0.3s ease;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
           }
 
-          .text-indigo-600 {
-            color: #4f46e5 !important;
+          .btn-outline-secondary:hover {
+            background: var(--bg-light);
+            border-color: var(--primary);
+            color: var(--primary);
           }
 
-          .bg-amber-100 {
-            background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%) !important;
-          }
-
-          .text-amber-600 {
-            color: #d97706 !important;
-          }
-
-          .bg-cyan-100 {
-            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%) !important;
-          }
-
-          .text-cyan-600 {
-            color: white !important;
-          }
-
-          .bg-gray-100 {
-            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%) !important;
-          }
-
-          .text-gray-600 {
-            color: #4b5563 !important;
-          }
-
-          .bg-red-100 {
-            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%) !important;
-          }
-
-          .text-red-600 {
-            color: #dc2626 !important;
-          }
-
+          /* Responsive styles */
           @media (max-width: 768px) {
             .header-content {
               flex-direction: column;
-              gap: 1rem;
               text-align: center;
             }
-            
-            .header-left {
-              flex-direction: column;
-              text-align: center;
-            }
-            
-            .header-icon {
-              margin-right: 0;
-              margin-bottom: 0.5rem;
-            }
-            
-            .filter-card {
-              padding: 1.5rem;
-            }
-            
-            .pagination-wrapper {
-              flex-direction: column;
-              text-align: center;
-            }
-            
-            .pagination-controls {
-              flex-wrap: wrap;
+
+            .header-left, .header-right {
+              flex: 1;
               justify-content: center;
+              min-width: 0;
             }
-            
-            .action-btn {
-              width: 36px;
-              height: 36px;
-              font-size: 1rem;
+
+            .filter-card {
+              padding: 1rem;
+            }
+
+            .table-responsive {
+              overflow-x: auto;
+              -webkit-overflow-scrolling: touch;
+            }
+
+            table {
+              width: 100%;
+            }
+
+            tr {
+              display: flex;
+              flex-direction: column;
+              margin-bottom: 1rem;
+              border: 1px solid var(--border);
+              border-radius: 8px;
+              box-shadow: var(--shadow-sm);
+            }
+
+            td {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 0.75rem;
+              border-bottom: 1px solid var(--border);
+            }
+
+            td:before {
+              content: attr(data-label);
+              font-weight: 600;
+              font-size: 0.8rem;
+              color: var(--secondary);
+              flex: 1;
+            }
+
+            td:last-child {
+              border-bottom: none;
+            }
+
+            .action-buttons {
+              justify-content: center;
+              gap: 0.5rem;
             }
           }
 
           @media (max-width: 576px) {
-            .page-number {
-              width: 36px;
-              height: 36px;
-              font-size: 0.8rem;
-            }
-            
-            .pagination-btn {
-              padding: 0.6rem 1rem;
-              font-size: 0.85rem;
-            }
-          }
-
-          .btn-outline-secondary {
-            border-color: #e2e8f0;
-            color: #64748b;
-            transition: all 0.3s ease;
-            height: 48px;
-            width: 48px;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 10px;
-          }
-
-          .btn-outline-secondary:hover {
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            border-color: #cbd5e1;
-            color: #475569;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-          }
-
-          .btn-outline-secondary:active {
-            transform: translateY(0);
+            .header-title { font-size: 1.25rem; }
+            .header-subtitle { font-size: 0.8rem; }
+            .btn-primary-gradient { padding: 0.6rem 1rem; font-size: 0.9rem; }
+            .search-input { font-size: 0.9rem; }
+            .pagination-btn { padding: 0.5rem 0.75rem; font-size: 0.8rem; }
+            .page-number { width: 32px; height: 32px; font-size: 0.8rem; }
           }
         `}
       </style>
@@ -763,54 +614,56 @@ const EmployerList = () => {
             <div className="header-content">
               <div className="header-left">
                 <div className="header-icon">
-                  <FaUserTie size={24} />
+                  <FaUserTie size={20} />
                 </div>
                 <div>
                   <h1 className="header-title">Employee Management</h1>
                   <p className="header-subtitle">
-                    Manage your team members efficiently with our intuitive system
+                    Efficiently manage your team with our intuitive system
                   </p>
                 </div>
               </div>
               <div className="header-right">
                 <button
                   onClick={() => navigate("/employers/create")}
-                  className="btn btn-primary-gradient d-flex align-items-center justify-content-center"
+                  className="btn btn-primary-gradient"
                 >
-                  <FiUserPlus className="me-2" size={18} />
+                  <FiUserPlus size={16} />
                   Add Employee
                 </button>
               </div>
             </div>
           </div>
 
-          <div className="p-4">
+          <div className="p-3 p-md-4">
             <div className="filter-card">
-              <div className="row g-4 align-items-center">
-                <div className="col-md-8">
+              <div className="row g-3">
+                <div className="col-12 col-md-7">
                   <div className="input-group">
                     <span className="input-group-text search-prepend">
-                      <FiSearch className="text-gray-500" size={18} />
+                      <FiSearch size={16} />
                     </span>
                     <input
                       type="text"
                       className="form-control search-input"
-                      placeholder="Search by name, national ID, or phone..."
+                      placeholder="Search by name, ID, or phone..."
                       value={searchQuery}
                       onChange={handleSearchChange}
+                      aria-label="Search employees"
                     />
                   </div>
                 </div>
-                <div className="col-md-4">
+                <div className="col-12 col-md-5">
                   <div className="d-flex gap-2">
                     <div className="input-group flex-grow-1">
                       <span className="input-group-text search-prepend">
-                        <FaFilter className="text-gray-500" size={16} />
+                        <FaFilter size={14} />
                       </span>
                       <select
                         className="form-select search-input"
                         value={departmentFilter}
                         onChange={handleDepartmentFilterChange}
+                        aria-label="Filter by department"
                       >
                         <option value="">All Departments</option>
                         {allDepartments.map((dept) => (
@@ -820,16 +673,14 @@ const EmployerList = () => {
                         ))}
                       </select>
                     </div>
-                    {(searchQuery ||
-                      departmentFilter ||
-                      sortField !== "full_name" ||
-                      sortDirection !== "asc") && (
+                    {(searchQuery || departmentFilter || sortField !== "full_name" || sortDirection !== "asc") && (
                       <button
                         onClick={handleResetFilters}
-                        className="btn btn-outline-secondary d-flex align-items-center"
-                        title="Reset all filters"
+                        className="btn btn-outline-secondary"
+                        title="Reset filters"
+                        aria-label="Reset filters"
                       >
-                        <FiRefreshCw size={18} />
+                        <FiRefreshCw size={16} />
                       </button>
                     )}
                   </div>
@@ -839,222 +690,146 @@ const EmployerList = () => {
 
             {loading ? (
               <div className="d-flex justify-content-center align-items-center py-5">
-                <div
-                  className="spinner-border text-primary"
-                  role="status"
-                  style={{ width: "3rem", height: "3rem" }}
-                >
+                <div className="spinner-border text-primary" role="status">
                   <span className="visually-hidden">Loading...</span>
                 </div>
               </div>
-            ) : !employers?.data || employers.data.length === 0 ? (
+            ) : !employers?.data?.length ? (
               <div className="empty-state">
-                <div className="empty-icon">
-                  <FaUserTie />
-                </div>
-                <h4 className="mb-3 text-gray-800">No Employees Found</h4>
-                <p className="text-gray-600 mb-4">{getEmptyStateMessage()}</p>
+                <FaUserTie className="empty-icon" />
+                <h4 className="mb-2 text-gray-800">No Employees Found</h4>
+                <p className="text-gray-600 mb-3">{getEmptyStateMessage()}</p>
                 <button
-                  style={{ width: "500px" }}
                   onClick={() => navigate("/employers/create")}
                   className="btn btn-primary-gradient"
                 >
-                  <FiUserPlus className="me-2" size={20} />
-                  Add
+                  <FiUserPlus size={16} />
+                  Add New Employee
                 </button>
               </div>
             ) : (
               <>
-                <div className="table-responsive table-card">
+                <div className="table-responsive">
                   <table className="table table-hover mb-0">
                     <thead className="table-header">
                       <tr>
-                        <th
-                          className="sortable-header"
-                          onClick={() => handleSort("full_name")}
-                        >
-                          <div className="d-flex align-items-center">
-                            Employee
-                            <FaSort
-                              className={`sort-icon ${
-                                sortField === "full_name" ? "active" : ""
-                              } ${
-                                sortField === "full_name" &&
-                                sortDirection === "desc"
-                                  ? "desc"
-                                  : ""
-                              }`}
-                            />
-                          </div>
-                        </th>
-                        <th
-                          className="sortable-header"
-                          onClick={() => handleSort("national_id")}
-                        >
-                          <div className="d-flex align-items-center">
-                            National ID
-                            <FaSort
-                              className={`sort-icon ${
-                                sortField === "national_id" ? "active" : ""
-                              } ${
-                                sortField === "national_id" &&
-                                sortDirection === "desc"
-                                  ? "desc"
-                                  : ""
-                              }`}
-                            />
-                          </div>
-                        </th>
-                        <th
-                          className="sortable-header"
-                          onClick={() => handleSort("department")}
-                        >
-                          <div className="d-flex align-items-center">
-                            Department
-                            <FaSort
-                              className={`sort-icon ${
-                                sortField === "department" ? "active" : ""
-                              } ${
-                                sortField === "department" &&
-                                sortDirection === "desc"
-                                  ? "desc"
-                                  : ""
-                              }`}
-                            />
-                          </div>
-                        </th>
-                        <th
-                          className="sortable-header"
-                          onClick={() => handleSort("phone")}
-                        >
-                          <div className="d-flex align-items-center">
-                            Phone
-                            <FaSort
-                              className={`sort-icon ${
-                                sortField === "phone" ? "active" : ""
-                              } ${
-                                sortField === "phone" &&
-                                sortDirection === "desc"
-                                  ? "desc"
-                                  : ""
-                              }`}
-                            />
-                          </div>
-                        </th>
-                        <th
-                          className="sortable-header"
-                          onClick={() => handleSort("salary")}
-                        >
-                          <div className="d-flex align-items-center">
-                            Salary
-                            <FaSort
-                              className={`sort-icon ${
-                                sortField === "salary" ? "active" : ""
-                              } ${
-                                sortField === "salary" &&
-                                sortDirection === "desc"
-                                  ? "desc"
-                                  : ""
-                              }`}
-                            />
-                          </div>
-                        </th>
-                        <th className="">Actions</th>
+                        {["Employee", "National ID", "Department", "Phone", "Salary"].map((label, index) => (
+                          <th
+                            key={label}
+                            className="sortable-header"
+                            onClick={() => handleSort(["full_name", "national_id", "department", "phone", "salary"][index])}
+                            scope="col"
+                          >
+                            <div className="d-flex align-items-center">
+                              {label}
+                              <FaSort
+                                className={`sort-icon ${
+                                  sortField === ["full_name", "national_id", "department", "phone", "salary"][index]
+                                    ? "active" : ""
+                                } ${
+                                  sortField === ["full_name", "national_id", "department", "phone", "salary"][index] &&
+                                  sortDirection === "desc" ? "desc" : ""
+                                }`}
+                              />
+                            </div>
+                          </th>
+                        ))}
+                        <th scope="col">Salary Summary</th>
+                        <th scope="col" style={{ textAlign: "center" }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {employers.data.map((employer) => (
                         <tr key={employer.id} className="table-row">
-                          <td>
-                            <div className="d-flex align-items-center">
-                              <div className="avatar">
+                          <td data-label="Employee">
+                            <div className="d-flex align-items-center gap-2">
+                              <div className="avatar d-none d-md-flex">
                                 {employer.full_name.charAt(0).toUpperCase()}
                               </div>
                               <div>
-                                <div className="fw-bold text-gray-800">
-                                  {employer.full_name}
-                                </div>
-                                <small className="text-gray-500">
+                                <div className="fw-bold">{employer.full_name}</div>
+                                <small className="text-gray-500 d-block d-md-none">
                                   ID: {employer.id}
                                 </small>
                               </div>
                             </div>
                           </td>
-                          <td>
-                            <div className="d-flex align-items-center">
-                              <FaIdCard className="me-2 table-icon" />
-                              <span className="fw-medium">
-                                {employer.national_id || "-"}
-                              </span>
+                          <td data-label="National ID">
+                            <div className="d-flex align-items-center gap-2">
+                              <FaIdCard className="table-icon d-none d-md-block" />
+                              <span>{employer.national_id || "-"}</span>
                             </div>
                           </td>
-                          <td>
-                            <div className="d-flex align-items-center">
-                              <FaBuilding className="me-2 table-icon" />
-                              <span className="fw-medium">
-                                {employer.department?.name || "-"}
-                              </span>
+                          <td data-label="Department">
+                            <div className="d-flex align-items-center gap-2">
+                              <FaBuilding className="table-icon d-none d-md-block" />
+                              <span>{employer.department?.name || "-"}</span>
                             </div>
                           </td>
-                          <td>
-                            <div className="d-flex align-items-center">
-                              <FaPhone className="me-2 table-icon" />
-                              <span className="fw-medium">
-                                {employer.phone}
-                              </span>
+                          <td data-label="Phone">
+                            <div className="d-flex align-items-center gap-2">
+                              <FaPhone className="table-icon d-none d-md-block" />
+                              <span>{employer.phone || "-"}</span>
                             </div>
                           </td>
-                          <td>
-                            <div className="d-flex align-items-center">
-                              <FaMoneyBillWave className="me-2 table-icon" />
+                          <td data-label="Salary">
+                            <div className="d-flex align-items-center gap-2">
+                              <FaMoneyBillWave className="table-icon d-none d-md-block" />
                               <span className="fw-bold">
-                                {employer.salary.toLocaleString()} EGP
+                                {employer.salary?.toLocaleString() || "0"} EGP
                               </span>
                             </div>
                           </td>
-                          <td className="text-end">
-                            <div className="d-flex justify-content-end gap-1">
-                              <button
-                                onClick={() => handleAttend(employer.id)}
-                                className="action-btn bg-indigo-100 text-indigo-600"
-                                title="Mark attendance"
-                              >
-                                <FiClock size={18} />
-                              </button>
-                              <button
-                                onClick={() => handleLeave(employer.id)}
-                                className="action-btn bg-amber-100 text-amber-600"
-                                title="Mark leave"
-                              >
-                                <FiLogOut size={18} />
-                              </button>
-                              <button
-                                onClick={() =>
-                                  navigate(`/employers/${employer.id}/edit`)
+                          <td data-label="Salary Summary">
+                            <button
+                              onClick={async () => {
+                                const token = localStorage.getItem("userToken");
+                                if (!token) {
+                                  toast.error("Please login to view salary summary");
+                                  navigate("/login");
+                                  return;
                                 }
-                                className="action-btn bg-cyan-100 text-cyan-600"
-                                title="Edit"
-                              >
-                                <FiEdit2 size={18} />
-                              </button>
-                              <button
-                                onClick={() =>
-                                  navigate(
-                                    `/employers/${employer.id}/adjustments`
-                                  )
+                                try {
+                                  setLoading(true);
+                                  const response = await calculateSalarySummary(employer.id);
+                                  const monthName = getMonthName(new Date().getMonth() + 1);
+                                  toast.success(`Salary summary calculated for ${monthName}`);
+                                  navigate(`/employers/${employer.id}/salary-summary`, {
+                                    state: { summaryData: response.data },
+                                  });
+                                } catch (error) {
+                                  toast.error(error.response?.data?.message || "Failed to calculate salary summary");
+                                } finally {
+                                  setLoading(false);
                                 }
-                                className="action-btn bg-gray-100 text-gray-600"
-                                title="Adjustments"
-                              >
-                                <HiOutlineAdjustments size={18} />
-                              </button>
-                              <button
-                                onClick={() => handleDelete(employer.id)}
-                                className="action-btn bg-red-100 text-red-600"
-                                title="Delete"
-                              >
-                                <FiTrash2 size={18} />
-                              </button>
+                              }}
+                              className="action-btn bg-green-100 text-green-600"
+                              title="View Salary Summary"
+                              disabled={loading}
+                              aria-label={`View salary summary for ${employer.full_name}`}
+                            >
+                              <FaMoneyBillWave size={16} />  
+                            </button>
+                          </td>
+                          <td data-label="Actions">
+                            <div className="d-flex gap-1 action-buttons">
+                              {[
+                                { action: handleAttend, icon: FiClock, color: "bg-indigo-100 text-indigo-600", title: "Mark attendance" },
+                                { action: handleLeave, icon: FiLogOut, color: "bg-amber-100 text-amber-600", title: "Mark leave" },
+                                { action: () => navigate(`/employers/${employer.id}/edit`), icon: FiEdit2, color: "bg-cyan-100 text-cyan-600", title: "Edit" },
+                                { action: () => navigate(`/employers/${employer.id}/adjustments`), icon: HiOutlineAdjustments, color: "bg-gray-100 text-gray-600", title: "Adjustments" },
+                                { action: handleDelete, icon: FiTrash2, color: "bg-red-100 text-red-600", title: "Delete" },
+                              ].map(({ action, icon: Icon, color, title }, index) => (
+                                <button
+                                  key={index}
+                                  onClick={() => action(employer.id)}
+                                  className={`action-btn ${color}`}
+                                  title={title}
+                                  aria-label={`${title} for ${employer.full_name}`}
+                                >
+                                  <Icon size={16} />
+                                </button>
+                              ))}
                             </div>
                           </td>
                         </tr>
@@ -1066,74 +841,55 @@ const EmployerList = () => {
                 <div className="pagination-container">
                   <div className="pagination-wrapper">
                     <div className="pagination-info">
-                      Showing {(currentPage - 1) * 10 + 1} to{" "}
-                      {Math.min(currentPage * 10, employers.total)} of{" "}
-                      {employers.total} employees
+                      Showing {(currentPage - 1) * 10 + 1} to {Math.min(currentPage * 10, employers.total)} of {employers.total} employees
                     </div>
-
                     <div className="pagination-controls">
                       <button
                         onClick={handlePreviousPage}
                         disabled={currentPage === 1}
                         className="pagination-btn"
+                        aria-label="Previous page"
                       >
-                        <FiChevronLeft size={18} />
+                        <FiChevronLeft size={16} />
                         Previous
                       </button>
-
-                      <div className="d-flex align-items-center">
-                        {totalPages > 1 && (
-                          <>
-                            {currentPage > 3 && (
-                              <>
-                                <div
-                                  className="page-number"
-                                  onClick={() => goToPage(1)}
-                                >
-                                  1
-                                </div>
-                                {currentPage > 4 && (
-                                  <span className="page-ellipsis">...</span>
-                                )}
-                              </>
-                            )}
-
-                            {getPageNumbers().map((page) => (
-                              <div
-                                key={page}
-                                className={`page-number ${
-                                  currentPage === page ? "active" : ""
-                                }`}
-                                onClick={() => goToPage(page)}
-                              >
-                                {page}
+                      {totalPages > 1 && (
+                        <>
+                          {currentPage > 3 && (
+                            <>
+                              <div className="page-number" onClick={() => goToPage(1)} aria-label="Page 1">1</div>
+                              {currentPage > 4 && <span className="page-ellipsis">...</span>}
+                            </>
+                          )}
+                          {getPageNumbers().map((page) => (
+                            <div
+                              key={page}
+                              className={`page-number ${currentPage === page ? "active" : ""}`}
+                              onClick={() => goToPage(page)}
+                              aria-label={`Page ${page}`}
+                              aria-current={currentPage === page ? "page" : undefined}
+                            >
+                              {page}
+                            </div>
+                          ))}
+                          {currentPage < totalPages - 2 && (
+                            <>
+                              {currentPage < totalPages - 3 && <span className="page-ellipsis">...</span>}
+                              <div className="page-number" onClick={() => goToPage(totalPages)} aria-label={`Page ${totalPages}`}>
+                                {totalPages}
                               </div>
-                            ))}
-
-                            {currentPage < totalPages - 2 && (
-                              <>
-                                {currentPage < totalPages - 3 && (
-                                  <span className="page-ellipsis">...</span>
-                                )}
-                                <div
-                                  className="page-number"
-                                  onClick={() => goToPage(totalPages)}
-                                >
-                                  {totalPages}
-                                </div>
-                              </>
-                            )}
-                          </>
-                        )}
-                      </div>
-
+                            </>
+                          )}
+                        </>
+                      )}
                       <button
                         onClick={handleNextPage}
                         disabled={currentPage >= totalPages}
                         className="pagination-btn"
+                        aria-label="Next page"
                       >
                         Next
-                        <FiChevronRight size={18} />
+                        <FiChevronRight size={16} />
                       </button>
                     </div>
                   </div>

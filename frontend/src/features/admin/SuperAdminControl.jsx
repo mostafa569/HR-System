@@ -43,10 +43,10 @@ const SuperAdminControl = () => {
   };
 
   const handleDelete = async (user) => {
-    if (user.id === currentUserId || user.role === "super admin") {
-      toast.error("You are not allowed to delete this user");
-      return;
-    }
+    // if (user.id === currentUserId || user.role === "super admin") {
+    //   toast.error("You are not allowed to delete this user");
+    //   return;
+    // }
     setSelectedUser(user);
     setShowConfirm(true);
   };
@@ -59,6 +59,11 @@ const SuperAdminControl = () => {
         },
       });
       toast.success("User deleted successfully");
+      if (selectedUser.id === currentUserId) {
+      localStorage.clear();
+      navigate("/login");
+      return;
+      }
       fetchUsers();
     } catch (err) {
       toast.error("Failed to delete user");
@@ -145,7 +150,7 @@ const SuperAdminControl = () => {
               <h4>No users found.</h4>
             </div>
           ) : (
-            <Table striped bordered hover responsive>
+            <Table hover responsive className="table-hover-effect">
               <thead>
                 <tr>
                   <th>Full Name</th>
@@ -165,32 +170,40 @@ const SuperAdminControl = () => {
                     <td>{user.email}</td>
                     <td>{user.role}</td>
                     <td style={{ textAlign: "center" }}>
+                      <div className="d-flex justify-content-center align-items-center gap-2">
                       <Button
                         onClick={() => navigate(`/edit-user/${user.id}`)}
                         disabled={!canEdit(user)}
                         title="Edit User"
-                        className="action-btn bg-cyan-100 text-cyan-600 me-2 p-2 rounded-lg hover:bg-cyan-200 transition-colors"
-                        style={{ minWidth: "36px", minHeight: "36px" }}
+                        // className="action-btn bg-cyan-100 text-cyan-600 me-2 p-2 rounded-lg hover:bg-cyan-200 transition-colors"
+                        // style={{ minWidth: "36px", minHeight: "36px" }}
+                        variant="outline-primary"
+                        className="d-flex justify-content-center align-items-center me-1"
+                        style={{ minWidth: "30px", minHeight: "30px", width: "30px", height: "30px", padding: "4px" }}
                       >
                         <FiEdit2 size={18} />
                       </Button>
                       <Button
                         onClick={() => handleDelete(user)}
-                        className="action-btn flex items-center justify-center p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        style={{
-                          minWidth: "36px",
-                          minHeight: "36px",
-                          backgroundColor: "#ef4444",
-                          color: "white",
-                          border: "none",
-                          hover: "bg-red-600"
-                        }}
-                        disabled={user.role === "super admin"}
+                        // className="action-btn flex items-center justify-center p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        // style={{
+                        //   minWidth: "36px",
+                        //   minHeight: "36px",
+                        //   backgroundColor: "#ef4444",
+                        //   color: "white",
+                        //   border: "none",
+                        //   hover: "bg-red-600"
+                        // }}
+                        // disabled={user.role === "super admin"}
+                        variant="outline-danger"
+                        className="d-flex justify-content-center align-items-center"
+                        style={{ minWidth: "30px", minHeight: "30px", width: "30px", height: "30px", padding: "4px" }}
                         title="Delete User"
                         aria-label="Delete User"
                       >
                         <FiTrash2 size={18} />
                       </Button>
+                    </div>
                     </td>
                   </tr>
                 ))}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { createEmployer, getDepartments } from "../services/employerService";
+import { nationalities } from "../constants/nationalities";
 import {
   FaUser,
   FaVenusMars,
@@ -50,11 +51,11 @@ const CreateEmployer = () => {
     const fetchDepartments = async () => {
       try {
         const response = await getDepartments();
-        // Check if response.data exists, otherwise use the response directly
+
         setDepartments(response.data || response);
       } catch (error) {
         toast.error("Failed to fetch departments", { theme: "light" });
-        setDepartments([]); // Set to empty array on error
+        setDepartments([]);
       }
     };
     fetchDepartments();
@@ -62,17 +63,58 @@ const CreateEmployer = () => {
 
   const validate = () => {
     const newErrors = {};
-    if (!formData.full_name) newErrors.full_name = "Full name is required";
-    if (!formData.gender) newErrors.gender = "Gender is required";
-    if (!formData.nationality)
+
+    // Full Name validation
+    if (!formData.full_name) {
+      newErrors.full_name = "Full name is required";
+    } else if (!/^[a-zA-Z\s]+$/.test(formData.full_name)) {
+      newErrors.full_name =
+        "Name must contain only English letters without numbers or special characters";
+    }
+
+    // Gender validation
+    if (!formData.gender) {
+      newErrors.gender = "Gender is required";
+    }
+
+    // Nationality validation
+    if (!formData.nationality) {
       newErrors.nationality = "Nationality is required";
-    if (!formData.dob) newErrors.dob = "Date of birth is required";
-    if (!formData.national_id)
+    }
+
+    // Date of Birth validation
+    if (!formData.dob) {
+      newErrors.dob = "Date of birth is required";
+    } else {
+      const dobDate = new Date(formData.dob);
+      const today = new Date();
+      if (dobDate > today) {
+        newErrors.dob = "Date of birth cannot be in the future";
+      }
+    }
+
+    // National ID validation
+    if (!formData.national_id) {
       newErrors.national_id = "National ID is required";
-    else if (!/^(2|3)\d{13}$/.test(formData.national_id))
-      newErrors.national_id = "Invalid National ID";
+    } else if (!/^[0-9]+$/.test(formData.national_id)) {
+      newErrors.national_id = "National ID must contain only numbers";
+    } else if (
+      formData.national_id.length < 5 ||
+      formData.national_id.length > 20
+    ) {
+      newErrors.national_id = "National ID must be between 5 and 20 digits";
+    }
+
+    // Phone validation
+    if (!formData.phone) {
+      newErrors.phone = "Phone number is required";
+    } else if (!/^01[0125][0-9]{8}$/.test(formData.phone)) {
+      newErrors.phone =
+        "Invalid phone number. Must start with 01 followed by 0, 1, 2, or 5 and then 8 digits";
+    }
+
+    // Other validations
     if (!formData.address) newErrors.address = "Address is required";
-    if (!formData.phone) newErrors.phone = "Phone is required";
     if (!formData.department_id)
       newErrors.department_id = "Department is required";
     if (!formData.contract_date)
@@ -81,6 +123,7 @@ const CreateEmployer = () => {
     if (!formData.attendance_time)
       newErrors.attendance_time = "Attendance time is required";
     if (!formData.leave_time) newErrors.leave_time = "Leave time is required";
+
     return newErrors;
   };
 
@@ -92,18 +135,54 @@ const CreateEmployer = () => {
     if (Object.keys(validationErrors).length === 0) {
       setIsLoading(true);
       try {
-        await createEmployer(formData);
-        toast.success("Employee created successfully", { theme: "light" });
+        const submitData = {
+          ...formData,
+          attendance_time: formData.attendance_time
+            ? formData.attendance_time
+            : null,
+          leave_time: formData.leave_time ? formData.leave_time : null,
+        };
+
+        await createEmployer(submitData);
+        toast.success("Employee created successfully");
         navigate("/employers");
       } catch (error) {
-        toast.error(
-          error.response?.data?.message || "Failed to create employee",
-          { theme: "light" }
-        );
+        console.error("Create error:", error);
+        const errorMessage = error.response?.data?.message;
+        const validationErrors = error.response?.data?.errors;
+
+        if (validationErrors) {
+          // Handle validation errors from the server
+          const formattedErrors = {};
+          Object.keys(validationErrors).forEach((key) => {
+            formattedErrors[key] = validationErrors[key][0];
+          });
+          setErrors(formattedErrors);
+
+          // Switch to the appropriate tab based on the first error
+          const errorField = Object.keys(validationErrors)[0];
+          if (
+            ["full_name", "gender", "nationality", "dob"].includes(errorField)
+          ) {
+            setActiveTab("personal");
+          } else if (["national_id", "address", "phone"].includes(errorField)) {
+            setActiveTab("identification");
+          } else if (
+            ["department_id", "contract_date", "salary"].includes(errorField)
+          ) {
+            setActiveTab("employment");
+          } else if (["attendance_time", "leave_time"].includes(errorField)) {
+            setActiveTab("schedule");
+          }
+        } else {
+          // Handle other types of errors
+          toast.error(errorMessage || "Failed to create employee");
+        }
+      } finally {
         setIsLoading(false);
       }
     } else {
-      // Highlight the first tab with errors
+      // Handle client-side validation errors
       if (
         validationErrors.full_name ||
         validationErrors.gender ||
@@ -377,7 +456,7 @@ const CreateEmployer = () => {
                 border: "2px solid #e63946",
                 color: "#e63946",
                 fontWeight: "600",
-                padding: "0.375rem 0.75rem", // Reduced padding
+                padding: "0.375rem 0.75rem",
                 borderRadius: "8px",
                 display: "flex",
                 alignItems: "center",
@@ -399,9 +478,9 @@ const CreateEmployer = () => {
             >
               <FaTimes
                 style={{
-                  marginRight: "0.4rem", // Slightly reduced margin
+                  marginRight: "0.4rem",
                   transition: "transform 0.3s ease",
-                  fontSize: "0.9rem", // Slightly smaller icon
+                  fontSize: "0.9rem",
                 }}
               />
               <span style={{ fontSize: "0.9rem" }}>Cancel</span>
@@ -613,12 +692,12 @@ const CreateEmployer = () => {
                       <span className="input-group-text">
                         <FaGlobe />
                       </span>
-                      <input
-                        type="text"
-                        className={`form-control ${
+                      <select
+                        className={`form-select ${
                           errors.nationality ? "is-invalid" : ""
                         }`}
                         id="nationality"
+                        name="nationality"
                         value={formData.nationality}
                         onChange={(e) =>
                           setFormData({
@@ -626,8 +705,14 @@ const CreateEmployer = () => {
                             nationality: e.target.value,
                           })
                         }
-                        placeholder="Nationality"
-                      />
+                      >
+                        <option value="">Select Nationality</option>
+                        {nationalities.map((nationality) => (
+                          <option key={nationality} value={nationality}>
+                            {nationality}
+                          </option>
+                        ))}
+                      </select>
                       {errors.nationality && (
                         <div className="invalid-feedback">
                           {errors.nationality}
@@ -698,7 +783,7 @@ const CreateEmployer = () => {
                           national_id: e.target.value,
                         })
                       }
-                      placeholder="2 or 3 followed by 13 digits"
+                      placeholder="Enter national ID (5-20 digits)"
                     />
                     {errors.national_id && (
                       <div className="invalid-feedback">

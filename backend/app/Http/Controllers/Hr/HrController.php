@@ -25,8 +25,8 @@ class HrController extends Controller
            return response()->json(['error' => 'Unauthorized. Only super admins can add HRs'], 403);
         }
              $validated = $request->validate([
-            'full_name' => 'required|string',
-            'username' => 'required|string|unique:hr_users,username',
+            'full_name' => 'required|string|regex:/^[^0-9]+$/',
+            'username' => 'required|string|unique:hr_users,username|regex:/^(?=.*[a-zA-Z])[a-zA-Z0-9]+$/',
             'email' => 'required|email|unique:hr_users,email',
             'password' => 'required|min:6',
             'role' => 'required|in:super admin,hr'
@@ -66,8 +66,8 @@ class HrController extends Controller
         }
 
         $validated = $request->validate([
-            'full_name' => 'sometimes|string',
-            'username' => 'sometimes|string|unique:hr_users,username,' . $id,
+            'full_name' => 'sometimes|string|regex:/^[^0-9]+$/',
+            'username' => 'sometimes|string|unique:hr_users,username,' . $id . '|regex:/^(?=.*[a-zA-Z])[a-zA-Z0-9]+$/',
             'email' => 'sometimes|email|unique:hr_users,email,' . $id,
             'password' => 'sometimes|min:6',
             'role' => 'sometimes|in:super admin,hr',
@@ -94,9 +94,9 @@ class HrController extends Controller
             return response()->json(['error' => 'Unauthorized. Super admin only.'], 403);
         }
 
-        if ($targetUser->role === 'super admin') {
-            return response()->json(['error' => 'Cannot delete super admin.'], 403);
-        }
+        // if ($targetUser->role === 'super admin') {
+        //     return response()->json(['error' => 'Cannot delete super admin.'], 403);
+        // }
 
         $targetUser->delete();
 

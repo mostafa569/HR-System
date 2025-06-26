@@ -1,8 +1,16 @@
 .content {
-  
-  padding:  12px 20px; 
+  padding: 12px 20px;
   background-color: #f5f7fa;
   min-height: 100vh;
+}
+
+.cardContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .cardHeader {
@@ -12,14 +20,13 @@
   border-radius: 15px 15px 0 0;
   display: flex;
   justify-content: space-between;
-  align-items: center; 
+  align-items: center;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   margin-bottom: 30px;
   border: none;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  min-height: 100px; 
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  min-height: 100px;
 }
-
 
 .cardHeader h2 {
   margin: 0;
@@ -36,13 +43,16 @@
   color: #e0e0e0;
 }
 
-.addButton  {
+.addButton {
   /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
   background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
   border: none !important;
   border-radius: 8px;
   /* padding: 15px 20px !important; */
-  font-weight: 600 !important;
+  font-weight: 1000 !important;
+  font-size: 900;
+  width: 200px;
+
   color: white;
   cursor: pointer;
   display: flex;
@@ -55,7 +65,6 @@
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-
 .backbutton {
   background: linear-gradient(135deg, #764ba2 0%, #667eea 100%) !important;
   border: none !important;
@@ -66,8 +75,7 @@
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
 }
 
-
-  .cardBox {
+.cardBox {
   background-color: #ffffff;
   border-radius: 15px;
   /* padding: 30px; */
@@ -79,8 +87,6 @@
 .cardBox:hover {
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
 }
-
-
 
 /* input style */
 .inputField {
@@ -113,7 +119,6 @@
   box-shadow: 0 0 0 0.2rem rgba(118, 75, 162, 0.25);
   outline: none;
 }
-
 
 @media (max-width: 991.98px) {
   .content {

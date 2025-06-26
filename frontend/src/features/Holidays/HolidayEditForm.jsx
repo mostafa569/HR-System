@@ -79,13 +79,13 @@ const HolidayEditForm = ({ holiday, onClose, onUpdated, holidays = [] }) => {
   }, [holiday]);
 
   useEffect(() => {
-    // إخفاء الشريط الجانبي عند فتح النموذج
+    
     const sidebar = document.querySelector(".sidebar-wrapper");
     if (sidebar) {
       sidebar.style.display = "none";
     }
 
-    // إعادة إظهار الشريط الجانبي عند إغلاق النموذج
+     
     return () => {
       if (sidebar) {
         sidebar.style.display = "block";

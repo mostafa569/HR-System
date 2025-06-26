@@ -21,8 +21,14 @@ class DepartmentController extends Controller
     {
         $request->validate([
             'name' => [
-                'required', 'string', 'max:255', Rule::unique('departments', 'name'),
+                'required', 
+                'string', 
+                'max:255', 
+                'regex:/^[a-zA-Z\s]+$/',
+                Rule::unique('departments', 'name'),
             ],
+        ], [
+            'name.regex' => 'Department name must contain only English letters without numbers or special characters',
         ]);
 
         $department = Department::create(['name' => $request->name]);
@@ -41,8 +47,14 @@ class DepartmentController extends Controller
     {
         $request->validate([
             'name' => [
-                'required', 'string', 'max:255', Rule::unique('departments', 'name')->ignore($department->id),
+                'required', 
+                'string', 
+                'max:255', 
+                'regex:/^[a-zA-Z\s]+$/',
+                Rule::unique('departments', 'name')->ignore($department->id),
             ],
+        ], [
+            'name.regex' => 'Department name must contain only English letters without numbers or special characters',
         ]);
 
         $department->update(['name' => $request->name]);

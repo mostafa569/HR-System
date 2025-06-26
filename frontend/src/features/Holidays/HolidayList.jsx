@@ -11,10 +11,9 @@ const HolidayList = () => {
   const [error, setError] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
 
-  // API configuration
+ 
   const API_URL = "http://127.0.0.1:8000/api";
-
-  // Fetch holidays from Laravel API
+ 
   const fetchHolidays = async () => {
     try {
       setLoading(true);
@@ -68,9 +67,8 @@ const HolidayList = () => {
       });
 
       if (!response.ok) {
-        // Handle empty response body for successful deletes
-        if (response.status === 204 || response.status === 200) {
-          // Success with no content
+         if (response.status === 204 || response.status === 200) {
+          
           await fetchHolidays();
           return;
         }
@@ -80,26 +78,26 @@ const HolidayList = () => {
           const errorData = await response.json();
           errorMessage = errorData.message || errorMessage;
         } catch {
-          // Response might not be JSON
+          
         }
         throw new Error(errorMessage);
       }
 
-      // Handle successful response with content
+       
       try {
         const result = await response.json();
         console.log("Delete successful:", result);
       } catch {
-        // Response might be empty, which is fine for DELETE
+    
       }
 
-      // Refresh the holidays list
+      
       await fetchHolidays();
     } catch (error) {
       console.error("Error deleting holiday:", error);
       setError(error.message || "Failed to delete holiday");
       
-      // Clear error after 5 seconds
+      
       setTimeout(() => setError(""), 5000);
     }
   };
@@ -112,21 +110,17 @@ const HolidayList = () => {
     setSearchDate("");
   };
 
-  // Enhanced filtering function that includes the active filter
-  const filteredHolidays =
+   const filteredHolidays =
     holidays?.filter((h) => {
       if (!h) return false;
-      // Allow weekly holidays without name
-      if (!h.name && h.type !== "weekly") return false;
+       if (!h.name && h.type !== "weekly") return false;
 
-      // Apply search filters
-      const matchesName = searchName
+       const matchesName = searchName
         ? (h.name || "").toLowerCase().includes(searchName.toLowerCase())
         : true;
       const matchesDate = searchDate ? h.date?.includes(searchDate) : true;
 
-      // Apply active filter
-      let matchesFilter = true;
+       let matchesFilter = true;
       switch (activeFilter) {
         case "official":
           matchesFilter = h.type === "official";
@@ -146,8 +140,7 @@ const HolidayList = () => {
       return matchesName && matchesDate && matchesFilter;
     }) || [];
 
-  // Function to handle filter card clicks
-  const handleFilterClick = (filterType) => {
+   const handleFilterClick = (filterType) => {
     if (activeFilter === filterType) {
       setActiveFilter("all");
     } else {
@@ -155,8 +148,7 @@ const HolidayList = () => {
     }
   };
 
-  // Calculate stats
-  const totalHolidays = holidays?.length || 0;
+   const totalHolidays = holidays?.length || 0;
   const officialHolidays =
     holidays?.filter((h) => h?.type === "official").length || 0;
   const weeklyHolidays =

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import styles from "./Sidebar.module.css";
 import { Nav } from "react-bootstrap";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import { logoutUser } from "../../features/auth/services/authService";
+import { toast } from "react-toastify";
 
 import {
   FaHome,
@@ -13,6 +15,8 @@ import {
   FaMoneyCheckAlt,
   FaCog,
   FaSignOutAlt,
+  FaRobot,
+  FaChartBar,
 } from "react-icons/fa";
 
 export default function Sidebar({ sidebarOpen, darkMode }) {
@@ -31,14 +35,28 @@ export default function Sidebar({ sidebarOpen, darkMode }) {
 
   const shouldShowSidebar = isLargeScreen || sidebarOpen;
 
-  const handleLogout = (e) => {
+  const handleLogout = async (e) => {
     e.preventDefault();
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/login", { replace: true });
+    try {
+      await logoutUser();
+      toast.success("Logged out successfully");
+    } catch (error) {
+      console.error("Logout error", error);
+      toast.error("Logout failed on the server.");
+    } finally {
+      localStorage.removeItem("userToken");
+      localStorage.removeItem("userData");
+      navigate("/login", { replace: true });
+    }
   };
 
   const isActive = (path) => {
+    if (path === "/employers") {
+      return location.pathname === "/employers";
+    }
+    if (path === "/employers/salary-summaries") {
+      return location.pathname === "/employers/salary-summaries";
+    }
     return location.pathname === path;
   };
 
@@ -68,7 +86,8 @@ export default function Sidebar({ sidebarOpen, darkMode }) {
           </NavLink> */}
           <NavLink
             to={
-              JSON.parse(localStorage.getItem("userData"))?.role === "super admin"
+              JSON.parse(localStorage.getItem("userData"))?.role ===
+              "super admin"
                 ? "/super-admin-control"
                 : JSON.parse(localStorage.getItem("userData"))?.role === "hr"
                 ? "/hr-control"
@@ -78,7 +97,8 @@ export default function Sidebar({ sidebarOpen, darkMode }) {
               `nav-link ${styles.navLink} ${isActive ? styles.active : ""}`
             }
           >
-            <FaUserShield className="me-3" style={{ fontSize: "1.5rem" }} /> Admin
+            <FaUserShield className="me-3" style={{ fontSize: "1.5rem" }} />{" "}
+            Admin
           </NavLink>
 
           <NavLink
@@ -86,6 +106,7 @@ export default function Sidebar({ sidebarOpen, darkMode }) {
             className={({ isActive }) =>
               `nav-link ${styles.navLink} ${isActive ? styles.active : ""}`
             }
+            end
           >
             <FaUsers className="me-3" style={{ fontSize: "1.5rem" }} />{" "}
             Employees
@@ -118,7 +139,7 @@ export default function Sidebar({ sidebarOpen, darkMode }) {
             Holidays
           </NavLink>
           <NavLink
-            to="/summary-salary"
+            to="/employers/salary-summaries"
             className={({ isActive }) =>
               `nav-link ${styles.navLink} ${isActive ? styles.active : ""}`
             }
@@ -126,6 +147,7 @@ export default function Sidebar({ sidebarOpen, darkMode }) {
             <FaMoneyCheckAlt className="me-3" style={{ fontSize: "1.5rem" }} />{" "}
             Summary Salary
           </NavLink>
+
           {/* <NavLink
             to="/employers/adjustments"
             className={({ isActive }) =>

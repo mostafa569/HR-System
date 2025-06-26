@@ -22,4 +22,9 @@ class Employer extends Model
     {
         return $this->hasMany(Attendance::class);
     }
+
+    public function adjustments()
+    {
+        return $this->hasMany(Adjustment::class);
+    }
 }

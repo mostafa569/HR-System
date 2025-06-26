@@ -47,8 +47,9 @@ export default function AppNavbar({ toggleSidebar, darkMode, toggleDarkMode }) {
             <Button variant={darkMode ? 'secondary' : 'primary'}>
               <FaSearch style={{ fontSize: '1.2rem' }} />
             </Button>
-          </Form> */}
-          {/* <Button
+          </Form> */
+          
+          /* <Button
             variant={darkMode ? 'primary' : 'outline-primary'}
             className="mx-2"
             onClick={toggleDarkMode}
