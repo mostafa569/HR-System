@@ -39,7 +39,7 @@ class SalaryCalculationService
 
             $salaryCalculations = $this->calculateFinalSalary($baseSalary, $daysInMonth, $absentDays, $adjustmentCalculations);
 
-            if ($attendanceDays == 0) {
+            if ($attendanceDays == 0 ) {
                 $salaryCalculations['final_salary'] = 0;
             }
 
@@ -103,7 +103,8 @@ class SalaryCalculationService
     protected function getHolidays($startDate, $endDate)
     {
         return Holiday::where(function($query) use ($startDate, $endDate) {
-            $query->where('type', 'weekly')->whereNotNull('day');
+            $query->where('type', 'weekly')->whereNotNull('day')
+             ->whereBetween('date', [$startDate, $endDate]);
             $query->orWhere(function($q) use ($startDate, $endDate) {
                 $q->where('type', 'official')
                    ->whereNotNull('date')

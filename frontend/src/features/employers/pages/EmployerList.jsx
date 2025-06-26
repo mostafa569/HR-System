@@ -1029,8 +1029,8 @@ const EmployerList = () => {
                               </span>
                             </div>
                           </td>
-                          <td data-label="Salary Summary">
-                            <button
+                          <td data-label="Salary Summary" style={{textAlign:"center"}}>
+                            <button style={{ margin: "0 auto", display: "block" }}
                               onClick={async () => {
                                 const token = localStorage.getItem("userToken");
                                 if (!token) {
@@ -1096,15 +1096,15 @@ const EmployerList = () => {
                                   color: "bg-cyan-100 text-cyan-600",
                                   title: "Edit",
                                 },
-                                {
-                                  action: () =>
-                                    navigate(
-                                      `/employers/${employer.id}/adjustments`
-                                    ),
-                                  icon: HiOutlineAdjustments,
-                                  color: "bg-gray-100 text-gray-600",
-                                  title: "Adjustments",
-                                },
+                                // {
+                                //   action: () =>
+                                //     navigate(
+                                //       `/employers/${employer.id}/adjustments`
+                                //     ),
+                                //   icon: HiOutlineAdjustments,
+                                //   color: "bg-gray-100 text-gray-600",
+                                //   title: "Adjustments",
+                                // },
                                 {
                                   action: handleDelete,
                                   icon: FiTrash2,

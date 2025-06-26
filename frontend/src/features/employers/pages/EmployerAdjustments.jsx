@@ -110,6 +110,8 @@ const EmployerAdjustments = () => {
         ...form,
         employer_id: employerId,
         value: parsedValue,
+        reason:
+          form.reason !== undefined && form.reason !== null ? form.reason : "",
       };
 
       await createAdjustment(payload);
@@ -124,7 +126,30 @@ const EmployerAdjustments = () => {
       setIsEditing(false);
       setCurrentAdjustmentId(null);
     } catch (err) {
-      setError(err.message || "Failed to create adjustment");
+      // Handle backend validation errors
+      if (err.response && err.response.data && err.response.data.errors) {
+        const errors = err.response.data.errors;
+        if (errors.reason) {
+          setError(
+            "Reason is required. Please provide a reason for the adjustment."
+          );
+        } else {
+          const messages = Object.values(errors).flat().join("\n");
+          setError(messages);
+        }
+      } else if (
+        err.response &&
+        err.response.status === 500 &&
+        err.response.data &&
+        err.response.data.message &&
+        err.response.data.message.toLowerCase().includes("reason")
+      ) {
+        setError(
+          "Reason is required. Please provide a reason for the adjustment."
+        );
+      } else {
+        setError(err.message || "Failed to create adjustment");
+      }
     } finally {
       setLoading(false);
     }
@@ -184,6 +209,8 @@ const EmployerAdjustments = () => {
         ...form,
         employer_id: employerId,
         value: parsedValue,
+        reason:
+          form.reason !== undefined && form.reason !== null ? form.reason : "",
       };
 
       await updateAdjustment(currentAdjustmentId, payload);
@@ -199,7 +226,30 @@ const EmployerAdjustments = () => {
       setIsEditing(false);
       setCurrentAdjustmentId(null);
     } catch (err) {
-      setError(err.message || "Failed to update adjustment");
+      // Handle backend validation errors
+      if (err.response && err.response.data && err.response.data.errors) {
+        const errors = err.response.data.errors;
+        if (errors.reason) {
+          setError(
+            "Reason is required. Please provide a reason for the adjustment."
+          );
+        } else {
+          const messages = Object.values(errors).flat().join("\n");
+          setError(messages);
+        }
+      } else if (
+        err.response &&
+        err.response.status === 500 &&
+        err.response.data &&
+        err.response.data.message &&
+        err.response.data.message.toLowerCase().includes("reason")
+      ) {
+        setError(
+          "Reason is required. Please provide a reason for the adjustment."
+        );
+      } else {
+        setError(err.message || "Failed to update adjustment");
+      }
     } finally {
       setLoading(false);
     }
@@ -272,7 +322,6 @@ const EmployerAdjustments = () => {
                       <div className={styles.infoItem}>
                         <span className={styles.infoLabel}>Base Salary</span>
                         <span className={styles.infoValue}>
-                          
                           {employers.find(
                             (emp) => emp.id === parseInt(employerId)
                           )?.salary || 0}
@@ -338,8 +387,10 @@ const EmployerAdjustments = () => {
 
                       <Form.Group className={styles.formGroup}>
                         <Form.Label>
-                          <FaClock className="me-2" /> Value 
-                          {form.value_type === "hours" ? " (hours)" : " (money)"}
+                          <FaClock className="me-2" /> Value
+                          {form.value_type === "hours"
+                            ? " (hours)"
+                            : " (money)"}
                         </Form.Label>
                         <Form.Control
                           type="number"
@@ -358,6 +409,7 @@ const EmployerAdjustments = () => {
                         <Form.Control
                           as="textarea"
                           name="reason"
+                          required
                           value={form.reason}
                           onChange={handleFormChange}
                           rows={4}

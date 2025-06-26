@@ -175,6 +175,16 @@ const EditEmployer = () => {
       newErrors.attendance_time = "Attendance time is required";
     if (!formData.leave_time) newErrors.leave_time = "Leave time is required";
 
+   
+    if (
+      formData.attendance_time &&
+      formData.leave_time &&
+      formData.attendance_time > formData.leave_time
+    ) {
+      newErrors.attendance_time = "Attendance time cannot be after leave time";
+      newErrors.leave_time = "Leave time cannot be before attendance time";
+    }
+
     return newErrors;
   };
 
@@ -1076,13 +1086,13 @@ const EditEmployer = () => {
                       <span className="input-group-text">
                         <FaClock />
                       </span>
-                     <input
+                      <input
                         type="time"
                         className={`form-control ${
                           errors.leave_time ? "is-invalid" : ""
                         }`}
                         id="leave_time"
-                        name="leave_time" 
+                        name="leave_time"
                         value={formData.leave_time}
                         onChange={handleChange}
                       />

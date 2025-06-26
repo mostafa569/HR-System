@@ -3,8 +3,8 @@ import styles from "../styles/Login.module.css";
 import { useNavigate, useLocation } from "react-router-dom";
 import { loginUser } from "../services/authService";
 import { toast } from "react-toastify";
-import loginImage from "../../../assets/teamwork.png"; 
-import logoimg from "../../../assets/hrlogo.png"
+import loginImage from "../../../assets/teamwork.png";
+import logoimg from "../../../assets/hrlogo.png";
 const Login = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
@@ -23,7 +23,7 @@ const Login = () => {
     }
     if (!formData.password) {
       newErrors.password = "Password is required";
-    } else if (!/^\w{6,}$/.test(formData.password)) {
+    } else if (formData.password.length < 6) {
       newErrors.password = "Password must be at least 6 characters";
     }
     return newErrors;
@@ -61,38 +61,38 @@ const Login = () => {
         <div className={styles.imageContainer}>
           <img src={loginImage} alt="Login Visual" />
         </div>
-       <form onSubmit={handleSubmit} className="text-center">
-            <img className={styles.hrlogo} src={logoimg} alt="" />
-           <h1>Login Now</h1>
+        <form onSubmit={handleSubmit} className="text-center">
+          <img className={styles.hrlogo} src={logoimg} alt="" />
+          <h1>Login Now</h1>
 
-        <div className={styles.inputGroup}>
-          <i className="fas fa-envelope"></i>
-          <input
-            id="email"
-            type="email"
-            placeholder="Email"
-            value={formData.email}
-            onChange={(e) =>
-              setFormData({ ...formData, email: e.target.value })
-            }
-          />
-        </div>
-        {errors.email && (
-          <div className="alert alert-danger">{errors.email}</div>
-        )}
+          <div className={styles.inputGroup}>
+            <i className="fas fa-envelope"></i>
+            <input
+              id="email"
+              type="email"
+              placeholder="Email"
+              value={formData.email}
+              onChange={(e) =>
+                setFormData({ ...formData, email: e.target.value })
+              }
+            />
+          </div>
+          {errors.email && (
+            <div className="alert alert-danger">{errors.email}</div>
+          )}
 
-        <div className={styles.inputGroup}>
-          <i className="fas fa-lock"></i>
-          <input
-            id="password"
-            type="password"
-            placeholder="Password"
-            value={formData.password}
-            onChange={(e) =>
-              setFormData({ ...formData, password: e.target.value })
-            }
-          />
-        </div>
+          <div className={styles.inputGroup}>
+            <i className="fas fa-lock"></i>
+            <input
+              id="password"
+              type="password"
+              placeholder="Password"
+              value={formData.password}
+              onChange={(e) =>
+                setFormData({ ...formData, password: e.target.value })
+              }
+            />
+          </div>
           {errors.password && (
             <div className="alert alert-danger">{errors.password}</div>
           )}
@@ -105,8 +105,7 @@ const Login = () => {
               </span>
             )}
           </button>
-          </form>
-
+        </form>
       </div>
     </section>
   );

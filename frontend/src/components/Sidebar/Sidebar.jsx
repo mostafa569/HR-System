@@ -138,6 +138,17 @@ export default function Sidebar({ sidebarOpen, darkMode }) {
             <FaCalendarCheck className="me-3" style={{ fontSize: "1.5rem" }} />{" "}
             Holidays
           </NavLink>
+          
+
+          <NavLink
+            to="/employers/adjustments"
+            className={({ isActive }) =>
+              `nav-link ${styles.navLink} ${isActive ? styles.active : ""}`
+            }
+          >
+            <FaCog className="me-3" style={{ fontSize: "1.5rem" }} />{" "}
+            Adjustments
+          </NavLink>
           <NavLink
             to="/employers/salary-summaries"
             className={({ isActive }) =>
@@ -147,16 +158,6 @@ export default function Sidebar({ sidebarOpen, darkMode }) {
             <FaMoneyCheckAlt className="me-3" style={{ fontSize: "1.5rem" }} />{" "}
             Summary Salary
           </NavLink>
-
-          {/* <NavLink
-            to="/employers/adjustments"
-            className={({ isActive }) =>
-              `nav-link ${styles.navLink} ${isActive ? styles.active : ""}`
-            }
-          >
-            <FaCog className="me-3" style={{ fontSize: "1.5rem" }} />{" "}
-            Adjustments
-          </NavLink> */}
           <button
             onClick={handleLogout}
             className={`nav-link border-0 bg-transparent w-100 text-start ${styles.navLink}`}

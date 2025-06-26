@@ -67,13 +67,20 @@ class SalarySummaryController extends Controller
              
             $summariesItems = $summaries->items();
             foreach ($summariesItems as $summary) {
-                
                 $employer = $summary->employer;
                 if ($employer && isset($summary->absent_days)) {
                     $dailySalary = $employer->salary / 30;
                     $summary->absent_deduction = round($summary->absent_days * $dailySalary, 2);
                 } else {
                     $summary->absent_deduction = 0;
+                }
+
+                
+                if ($employer && isset($summary->attendance_days)) {
+                    $dailySalary = $employer->salary / 30;
+                    $summary->final_salary_without_paid_holidays = max(0,round(($summary->attendance_days * $dailySalary)+$summary->total_additions-$summary->total_deductions-$summary->absent_deduction, 2));
+                } else {
+                    $summary->final_salary_without_paid_holidays = 0;
                 }
             }
 
@@ -145,44 +152,54 @@ class SalarySummaryController extends Controller
                 ->leftJoin('departments', 'employers.department_id', '=', 'departments.id')
                 ->where('employers.id', $employerId)
                 ->first();
-
+    
             if (!$employer) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Employer not found'
                 ], 404);
             }
-
+    
             $salarySummaries = DB::table('salary_summaries')
                 ->where('employer_id', $employerId)
                 ->orderBy('year', 'desc')
                 ->orderBy('month', 'desc')
                 ->get();
-
+    
             $uniqueSummaries = $salarySummaries->groupBy(function ($summary) {
                 return $summary->year . '-' . $summary->month;
             })->map(function ($group) {
                 return $group->first();
             })->values();
-
+    
             $uniqueSummaries->transform(function ($summary) use ($employer) {
                 $dailySalary = $employer->salary / 30;
+                
+                // Calculate absent deduction
                 $summary->absent_deduction = round($summary->absent_days * $dailySalary, 2);
-
-
+    
+                // Cast numeric fields to float
                 $summary->total_additions = floatval($summary->total_additions ?? 0);
                 $summary->total_deductions = floatval($summary->total_deductions ?? 0);
                 $summary->additions_hours = floatval($summary->additions_hours ?? 0);
                 $summary->deductions_hours = floatval($summary->deductions_hours ?? 0);
-
+    
+                // Calculate final salary (with paid holidays)
                 $totalDeductions = $summary->total_deductions + $summary->absent_deduction;
                 $summary->final_salary = max(0, $employer->salary + $summary->total_additions - $totalDeductions);
+                
+                // Calculate final salary WITHOUT paid holidays
+                $summary->final_salary_without_paid_holidays = max(0,round(($summary->attendance_days * $dailySalary)+$summary->total_additions-$summary->total_deductions-$summary->absent_deduction, 2));
+                
+                // If no attendance days, set both salaries to 0
                 if (isset($summary->attendance_days) && $summary->attendance_days == 0) {
                     $summary->final_salary = 0;
+                    $summary->final_salary_without_paid_holidays = 0;
                 }
+                
                 return $summary;
             });
-
+    
             return response()->json([
                 'status' => 'success',
                 'data' => [

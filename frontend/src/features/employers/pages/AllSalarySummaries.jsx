@@ -219,7 +219,9 @@ const AllSalarySummaries = () => {
                 <th>Absent Deduction</th>
                 <th>Additions</th>
                 <th> Deductions</th>
-                <th>Final Salary</th>
+                <th>Final Salary with paid holidays</th>
+                <th>Final Salary Without Paid Holidays</th>
+                <th>Attendance Salary</th>
               </tr>
             </thead>
             <tbody>
@@ -237,6 +239,10 @@ const AllSalarySummaries = () => {
                   <td>+${formatNumber(summary.total_additions)} EGP</td>
                   <td>-${formatNumber(summary.total_deductions)} EGP</td>
                   <td>${formatNumber(summary.final_salary)} EGP</td>
+                  <td>${formatNumber(
+                    summary.final_salary_without_paid_holidays
+                  )} EGP</td>
+                  <td>${formatNumber(getAttendanceSalary(summary))} EGP</td>
                 </tr>
               `
                 )
@@ -264,12 +270,14 @@ const AllSalarySummaries = () => {
       "Base Salary",
       "Attendance Days",
       "Absent Days",
-      // "Absent Deduction",
+      "Absent Deduction",
       "Additional Hours",
       "Deduction Hours",
       "Total Additions",
       " Deductions",
-      "Final Salary",
+      "Final Salary with paid holidays",
+      "Final Salary Without Paid Holidays",
+      "Attendance Salary",
     ];
 
     const csvData = salarySummaries.map((summary) => [
@@ -285,6 +293,8 @@ const AllSalarySummaries = () => {
       summary.total_additions || 0,
       summary.total_deductions || 0,
       summary.final_salary || 0,
+      summary.final_salary_without_paid_holidays || 0,
+      getAttendanceSalary(summary),
     ]);
 
     const csvContent = [
@@ -306,6 +316,13 @@ const AllSalarySummaries = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const getAttendanceSalary = (summary) => {
+    const dailySalary = summary.employer.salary
+      ? summary.employer.salary / 30
+      : 0;
+    return Math.round(dailySalary * (summary.attendance_days || 0) * 100) / 100;
   };
 
   if (loading) {
@@ -613,7 +630,11 @@ const AllSalarySummaries = () => {
                           <th className="text-end">Absent Deduction</th>
                           <th className="text-end">Additions</th>
                           <th className="text-end"> Deductions</th>
-                          <th className="text-end pe-4">Final Salary</th>
+                          <th className="text-end pe-4">Final Salary with paid holidays</th>
+                          <th className="text-end">
+                            Final Salary Without Paid Holidays
+                          </th>
+                          <th className="text-end">Attendance Salary</th>
                         </tr>
                       </thead>
                       <tbody id="printable-content">
@@ -665,6 +686,22 @@ const AllSalarySummaries = () => {
                                 <span className="badge bg-primary bg-opacity-10 text-primary fw-semibold">
                                   {Number(
                                     summary.final_salary
+                                  ).toLocaleString()}{" "}
+                                  EGP
+                                </span>
+                              </td>
+                              <td className="text-end">
+                                <span className="badge bg-warning bg-opacity-10 text-warning fw-semibold">
+                                  {Number(
+                                    summary.final_salary_without_paid_holidays
+                                  ).toLocaleString()}{" "}
+                                  EGP
+                                </span>
+                              </td>
+                              <td className="text-end">
+                                <span className="badge bg-info bg-opacity-10 text-info">
+                                  {getAttendanceSalary(
+                                    summary
                                   ).toLocaleString()}{" "}
                                   EGP
                                 </span>

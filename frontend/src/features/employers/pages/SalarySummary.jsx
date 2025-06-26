@@ -115,6 +115,8 @@ const SalarySummary = () => {
   };
 
   const handlePrint = () => {
+    const summary = paginatedSummaries[0];
+    const attendanceSalary = summary ? getAttendanceSalary(summary) : 0;
     const printContents =
       document.getElementById("printable-content").innerHTML;
     const originalContents = document.body.innerHTML;
@@ -122,7 +124,6 @@ const SalarySummary = () => {
     document.body.innerHTML = `
       <div class="container py-1">
         <h2 class="text-center mb-4">Salary Summary Report</h2>
-       
         ${printContents}
       </div>
     `;
@@ -136,7 +137,7 @@ const SalarySummary = () => {
     try {
       const headers = [
         "ID",
-        "Employer ID",
+        "Employer Name",
         "Month",
         "Year",
         "Attendance Days",
@@ -147,11 +148,13 @@ const SalarySummary = () => {
         "Deductions",
         "Absent Deduction",
         "Final Salary",
+        "Final Salary Without Paid Holidays",
+        "Attendance Salary",
       ];
 
       const csvData = filteredSummaries.map((summary) => [
         summary.id,
-        summary.employer_id,
+        employer?.full_name || "",
         summary.month,
         summary.year,
         summary.attendance_days || 0,
@@ -162,6 +165,8 @@ const SalarySummary = () => {
         summary.total_deductions || 0,
         summary.absent_deduction || 0,
         summary.final_salary || 0,
+        summary.final_salary_without_paid_holidays || 0,
+        getAttendanceSalary(summary),
       ]);
 
       const csvContent = [
@@ -187,6 +192,11 @@ const SalarySummary = () => {
       console.error("Error exporting CSV:", error);
       toast.error("Failed to export CSV");
     }
+  };
+
+  const getAttendanceSalary = (summary) => {
+    const dailySalary = employer?.salary ? employer.salary / 30 : 0;
+    return Math.round(dailySalary * (summary.attendance_days || 0) * 100) / 100;
   };
 
   if (loading) {
@@ -407,6 +417,27 @@ const SalarySummary = () => {
                               EGP
                             </span>
                           </div>
+                          <div className="d-flex justify-content-between mt-1">
+                            <span className="fw-bold">Attendance Salary:</span>
+                            <span className="fw-bold text-info fs-6">
+                              {paginatedSummaries[0]
+                                ? getAttendanceSalary(
+                                    paginatedSummaries[0]
+                                  ).toLocaleString()
+                                : "0"}{" "}
+                              EGP
+                            </span>
+                          </div>
+                          <div className="d-flex justify-content-between mt-1">
+                            <span className="fw-bold">
+                              Final Salary Without Paid Holidays:
+                            </span>
+                            <span className="fw-bold text-warning fs-6">
+                              {paginatedSummaries[0]?.final_salary_without_paid_holidays?.toLocaleString() ||
+                                "0"}{" "}
+                              EGP
+                            </span>
+                          </div>
                         </>
                       ) : (
                         <div className="text-center py-4 text-muted">
@@ -499,7 +530,13 @@ const SalarySummary = () => {
                           <th className="text-end">Additions</th>
                           <th className="text-end">Absent Deduction</th>
                           <th className="text-end"> Deductions</th>
-                          <th className="text-end pe-4">Final Salary</th>
+                          <th className="text-end pe-4">
+                            Final Salary with paid holidays
+                          </th>
+                          <th className="text-end">
+                            Final Salary Without Paid Holidays
+                          </th>
+                          <th className="text-end">Attendance Salary</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -559,6 +596,22 @@ const SalarySummary = () => {
                                   EGP
                                 </span>
                               </td>
+
+                              <td className="text-end">
+                                <span className="badge bg-warning bg-opacity-10 text-warning fw-semibold">
+                                  {summary.final_salary_without_paid_holidays?.toLocaleString() ||
+                                    0}{" "}
+                                  EGP
+                                </span>
+                              </td>
+                              <td className="text-end">
+                                <span className="badge bg-info bg-opacity-10 text-info">
+                                  {getAttendanceSalary(
+                                    summary
+                                  ).toLocaleString()}{" "}
+                                  EGP
+                                </span>
+                              </td>
                             </tr>
                           ))
                         ) : (
@@ -577,9 +630,8 @@ const SalarySummary = () => {
                 </div>
               </div>
 
-              {/* Note if attendance_days == 0 */}
               {paginatedSummaries.some(
-                (summary) => summary.attendance_days === 0
+                (summary) => summary.attendance_days == 0
               ) && (
                 <div
                   className="alert alert-warning mt-2"
@@ -589,7 +641,6 @@ const SalarySummary = () => {
                 </div>
               )}
 
-              {/* Pagination */}
               {totalPages > 1 && (
                 <div className="d-flex justify-content-between align-items-center">
                   <div className="text-muted small">
