@@ -54,9 +54,11 @@ const deleteEmployer = async (id) => {
   }
 };
 
-const attendEmployer = async (id) => {
+const attendEmployer = async (id, applyAdjustment) => {
   try {
-    const response = await api.post(`/employers/${id}/attend`);
+    const response = await api.post(`/employers/${id}/attend`, {
+      apply_adjustment: applyAdjustment,
+    });
     return response.data;
   } catch (error) {
     console.error("Error marking attendance:", error);
@@ -64,9 +66,11 @@ const attendEmployer = async (id) => {
   }
 };
 
-const leaveEmployer = async (id) => {
+const leaveEmployer = async (id, applyAdjustment) => {
   try {
-    const response = await api.post(`/employers/${id}/leave`);
+    const response = await api.post(`/employers/${id}/leave`, {
+      apply_adjustment: applyAdjustment,
+    });
     return response.data;
   } catch (error) {
     console.error("Error marking leave:", error);

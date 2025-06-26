@@ -94,9 +94,9 @@ class HrController extends Controller
             return response()->json(['error' => 'Unauthorized. Super admin only.'], 403);
         }
 
-        // if ($targetUser->role === 'super admin') {
-        //     return response()->json(['error' => 'Cannot delete super admin.'], 403);
-        // }
+       // if ($targetUser->role === 'super admin') {
+       //    return response()->json(['error' => 'Cannot delete super admin.'], 403);
+       // }
 
         $targetUser->delete();
 

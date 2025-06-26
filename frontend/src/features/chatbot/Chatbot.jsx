@@ -1,120 +1,430 @@
-import React, { useState, useRef, useEffect } from "react";
-import { toast } from "react-toastify";
-import { authService } from "../auth/services/authService";
-import styles from "./Chatbot.module.css";
+import React, { useState, useRef, useEffect } from 'react';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
+// Mock authService (replace with actual API calls in production)
+const authService = {
+  apiCall: async (url, options) => {
+    try {
+      // Simulate backend response for demo purposes
+      if (url === '/chatbot/chat') {
+        const { message } = JSON.parse(options.body);
+        return {
+          success: true,
+          response: `Processed: ${message}\n\nTry commands like:\n• statistics\n• employee count\n• department info\n• upcoming holidays\n• total salaries\n• help`,
+          timestamp: new Date().toISOString(),
+        };
+      } else if (url === '/chatbot/upload-pdf') {
+        return {
+          success: true,
+          response: '📄 PDF processed successfully.\n\nSample analysis:\n• File Size: 123.45 KB\n• Total Words: 500\n• CV Rating: ⭐ Very Good (85%)',
+        };
+      }
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': options.body instanceof FormData ? undefined : 'application/json',
+          // Add authorization headers if needed
+          // 'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Request failed');
+      }
+      return data;
+    } catch (error) {
+      console.error('API call error:', error);
+      throw error;
+    }
+  },
+};
+
+// Styles (using Tailwind-inspired CSS-in-JS)
+const styles = {
+  chatbotContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    maxWidth: '600px',
+    margin: '20px auto',
+    border: '1px solid #e0e0e0',
+    borderRadius: '8px',
+    background: '#fff',
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+    height: '80vh',
+  },
+  chatbotHeader: {
+    padding: '15px',
+    background: '#f5f5f5',
+    borderBottom: '1px solid #e0e0e0',
+    textAlign: 'center',
+  },
+  chatbotHeaderTitle: {
+    margin: 0,
+    fontSize: '1.5em',
+    color: '#333',
+  },
+  chatbotHeaderText: {
+    margin: '5px 0 0',
+    color: '#666',
+  },
+  messagesContainer: {
+    flex: 1,
+    padding: '15px',
+    overflowY: 'auto',
+    background: '#fafafa',
+  },
+  message: {
+    marginBottom: '15px',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  userMessage: {
+    alignItems: 'flex-end',
+  },
+  botMessage: {
+    alignItems: 'flex-start',
+  },
+  messageContent: {
+    maxWidth: '80%',
+    padding: '10px 15px',
+    borderRadius: '8px',
+    fontSize: '0.95em',
+    lineHeight: 1.4,
+  },
+  userMessageContent: {
+    background: '#007bff',
+    color: '#fff',
+  },
+  botMessageContent: {
+    background: '#e9ecef',
+    color: '333',
+  },
+  messageContentCode: {
+    display: 'block',
+    background: '#f8f9fa',
+    padding: '5px',
+    borderRadius: '4px',
+    fontFamily: '"Courier New", Courier, monospace',
+  },
+  messageTime: {
+    fontSize: '0.75em',
+    color: '#888',
+    marginTop: '5px',
+  },
+  inputContainer: {
+    display: 'flex',
+    padding: '10px',
+    borderTop: '1px solid #e0e0e0',
+    background: '#fff',
+  },
+  messageInput: {
+    flex: 1,
+    padding: '10px',
+    border: '1px solid #ccc',
+    borderRadius: '4px',
+    resize: 'none',
+    fontSize: '0.95em',
+    outline: 'none',
+    minHeight: '40px',
+    maxHeight: '100px',
+  },
+  messageInputFocus: {
+    borderColor: '#007bff',
+  },
+  sendButton: {
+    marginLeft: '10px',
+    padding: '10px 15px',
+    background: '#007bff',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '1em',
+  },
+  sendButtonDisabled: {
+    background: '#ccc',
+    cursor: 'not-allowed',
+  },
+  fileUploadContainer: {
+    padding: '10px',
+    borderTop: '1px solid #e0e0e0',
+    display: 'flex',
+    alignItems: 'center',
+    background: '#fff',
+  },
+  fileInput: {
+    marginRight: '10px',
+  },
+  uploadButton: {
+    padding: '10px 15px',
+    background: '#28a745',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+  },
+  uploadButtonDisabled: {
+    background: '#ccc',
+    cursor: 'not-allowed',
+  },
+  quickActions: {
+    padding: '10px',
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '10px',
+    borderTop: '1px solid #e0e0e0',
+    background: '#fff',
+  },
+  quickButton: {
+    padding: '8px 12px',
+    background: '#f8f9fa',
+    border: '1px solid #ccc',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '0.9em',
+  },
+  quickButtonHover: {
+    background: '#e9ecef',
+  },
+  quickButtonDisabled: {
+    background: '#ccc',
+    cursor: 'not-allowed',
+  },
+  typingIndicator: {
+    display: 'flex',
+    gap: '5px',
+  },
+  typingIndicatorSpan: {
+    width: '8px',
+    height: '8px',
+    background: '#666',
+    borderRadius: '50%',
+    animation: 'typing 1.2s infinite',
+  },
+  typingIndicatorSpan2: {
+    animationDelay: '0.2s',
+  },
+  typingIndicatorSpan3: {
+    animationDelay: '0.4s',
+  },
+};
+
+// Keyframes for typing animation
+const styleSheet = document.createElement('style');
+styleSheet.textContent = `
+  @keyframes typing {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+`;
+document.head.appendChild(styleSheet);
 
 const Chatbot = () => {
   const [messages, setMessages] = useState([]);
-  const [inputMessage, setInputMessage] = useState("");
+  const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [file, setFile] = useState(null);
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const textareaRef = useRef(null);
 
+  // Scroll to bottom when messages change
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
+  // Auto-resize textarea
   useEffect(() => {
-     
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+  }, [inputMessage]);
+
+  // Initialize welcome message
+  useEffect(() => {
     setMessages([
       {
         id: 1,
-        type: "bot",
+        type: 'bot',
         content:
-          "Hello! I'm your HR System AI Assistant. How can I help you today? Type 'help' to see all available commands.",
+          'Hello! I\'m your HR System AI Assistant. I can help with employee info, departments, holidays, attendance, salaries, and CV analysis. Type \'help\' to see all commands or upload a PDF for CV analysis.',
         timestamp: new Date(),
       },
     ]);
   }, []);
 
+  // Handle text message submission
   const sendMessage = async () => {
-    if (!inputMessage.trim()) return;
+    if (!inputMessage.trim()) {
+      toast.warn('Please enter a message.', { position: 'top-center' });
+      return;
+    }
 
     const userMessage = {
       id: Date.now(),
-      type: "user",
+      type: 'user',
       content: inputMessage,
       timestamp: new Date(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    setInputMessage("");
+    setInputMessage('');
     setIsLoading(true);
 
     try {
-      const response = await authService.apiCall("/chatbot/chat", {
-        method: "POST",
+      const response = await authService.apiCall('/chatbot/chat', {
+        method: 'POST',
         body: JSON.stringify({ message: inputMessage }),
       });
 
       if (response.success) {
         const botMessage = {
           id: Date.now() + 1,
-          type: "bot",
+          type: 'bot',
           content: response.response,
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, botMessage]);
       } else {
-        toast.error("Failed to get response from chatbot");
+        toast.error(response.response || 'Failed to get response from chatbot.', {
+          position: 'top-center',
+        });
       }
     } catch (error) {
-      console.error("Chatbot error:", error);
-      toast.error("Error communicating with chatbot");
+      console.error('Chatbot error:', error);
+      toast.error('Error communicating with chatbot. Please try again.', {
+        position: 'top-center',
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Handle file upload
+  const handleFileUpload = async () => {
+    if (!file) {
+      toast.warn('Please select a PDF file to upload.', { position: 'top-center' });
+      return;
+    }
+
+    if (!file.type.includes('pdf')) {
+      toast.warn('Please upload a valid PDF file.', { position: 'top-center' });
+      setFile(null);
+      fileInputRef.current.value = null;
+      return;
+    }
+
+    setIsLoading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await authService.apiCall('/chatbot/upload-pdf', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.success) {
+        const botMessage = {
+          id: Date.now(),
+          type: 'bot',
+          content: response.response,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, botMessage]);
+      } else {
+        toast.error(response.response || 'Failed to process PDF.', {
+          position: 'top-center',
+        });
+      }
+    } catch (error) {
+      console.error('PDF upload error:', error);
+      toast.error('Error uploading PDF. Please try again.', {
+        position: 'top-center',
+      });
+    } finally {
+      setFile(null);
+      fileInputRef.current.value = null;
+      setIsLoading(false);
+    }
+  };
+
+  // Handle key press for sending messages
   const handleKeyPress = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
   };
 
+  // Format message content with support for code blocks
   const formatMessage = (content) => {
-    return content.split("\n").map((line, index) => (
-      <React.Fragment key={index}>
-        {line}
-        {index < content.split("\n").length - 1 && <br />}
-      </React.Fragment>
-    ));
+    const lines = content.split('\n');
+    let inCodeBlock = false;
+    const formatted = lines.map((line, index) => {
+      if (line.trim().startsWith('```')) {
+        inCodeBlock = !inCodeBlock;
+        return null;
+      }
+      if (inCodeBlock) {
+        return <code key={index} style={styles.messageContentCode}>{line}</code>;
+      }
+      return (
+        <React.Fragment key={index}>
+          {line}
+          {index < lines.length - 1 && <br />}
+        </React.Fragment>
+      );
+    });
+    return formatted.filter((line) => line !== null);
   };
 
   return (
-    <div className={styles.chatbotContainer}>
-      <div className={styles.chatbotHeader}>
-        <h3>🤖 HR AI Assistant</h3>
-        <p>Ask me anything about your HR system</p>
+    <div style={styles.chatbotContainer}>
+      <div style={styles.chatbotHeader}>
+        <h3 style={styles.chatbotHeaderTitle}>🤖 HR AI Assistant</h3>
+        <p style={styles.chatbotHeaderText}>Ask about HR data or upload a CV for analysis</p>
       </div>
 
-      <div className={styles.messagesContainer}>
+      <div style={styles.messagesContainer}>
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`${styles.message} ${
-              message.type === "user" ? styles.userMessage : styles.botMessage
-            }`}
+            style={{
+              ...styles.message,
+              ...(message.type === 'user' ? styles.userMessage : styles.botMessage),
+            }}
           >
-            <div className={styles.messageContent}>
+            <div
+              style={{
+                ...styles.messageContent,
+                ...(message.type === 'user' ? styles.userMessageContent : styles.botMessageContent),
+              }}
+            >
               {formatMessage(message.content)}
             </div>
-            <div className={styles.messageTime}>
-              {message.timestamp.toLocaleTimeString()}
+            <div style={styles.messageTime}>
+              {message.timestamp.toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
             </div>
           </div>
         ))}
 
         {isLoading && (
-          <div className={`${styles.message} ${styles.botMessage}`}>
-            <div className={styles.typingIndicator}>
-              <span></span>
-              <span></span>
-              <span></span>
+          <div style={{ ...styles.message, ...styles.botMessage }}>
+            <div style={styles.typingIndicator}>
+              <span style={styles.typingIndicatorSpan}></span>
+              <span style={{ ...styles.typingIndicatorSpan, ...styles.typingIndicatorSpan2 }}></span>
+              <span style={{ ...styles.typingIndicatorSpan, ...styles.typingIndicatorSpan3 }}></span>
             </div>
           </div>
         )}
@@ -122,49 +432,70 @@ const Chatbot = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className={styles.inputContainer}>
+      <div style={styles.inputContainer}>
         <textarea
+          ref={textareaRef}
           value={inputMessage}
           onChange={(e) => setInputMessage(e.target.value)}
           onKeyPress={handleKeyPress}
           placeholder="Type your message here..."
           disabled={isLoading}
-          className={styles.messageInput}
+          style={styles.messageInput}
+          rows={1}
         />
         <button
           onClick={sendMessage}
           disabled={isLoading || !inputMessage.trim()}
-          className={styles.sendButton}
+          style={{
+            ...styles.sendButton,
+            ...(isLoading || !inputMessage.trim() ? styles.sendButtonDisabled : {}),
+          }}
+          title="Send Message"
         >
-          {isLoading ? "⏳" : "📤"}
+          {isLoading ? '⏳' : '📤'}
         </button>
       </div>
 
-      <div className={styles.quickActions}>
+      <div style={styles.fileUploadContainer}>
+        <input
+          type="file"
+          accept=".pdf"
+          ref={fileInputRef}
+          onChange={(e) => setFile(e.target.files[0])}
+          style={styles.fileInput}
+        />
         <button
-          onClick={() => setInputMessage("statistics")}
-          className={styles.quickButton}
+          onClick={handleFileUpload}
+          disabled={isLoading || !file}
+          style={{
+            ...styles.uploadButton,
+            ...(isLoading || !file ? styles.uploadButtonDisabled : {}),
+          }}
+          title="Upload PDF"
         >
-          📊 Statistics
+          📎 Upload CV
         </button>
-        <button
-          onClick={() => setInputMessage("employee count")}
-          className={styles.quickButton}
-        >
-          👥 Employees
-        </button>
-        <button
-          onClick={() => setInputMessage("department info")}
-          className={styles.quickButton}
-        >
-          🏢 Departments
-        </button>
-        <button
-          onClick={() => setInputMessage("help")}
-          className={styles.quickButton}
-        >
-          ❓ Help
-        </button>
+      </div>
+
+      <div style={styles.quickActions}>
+        {[
+          { text: '📊 Statistics', command: 'statistics' },
+          { text: '👥 Employees', command: 'employee count' },
+          { text: '🏢 Departments', command: 'department info' },
+          { text: '❓ Help', command: 'help' },
+        ].map(({ text, command }) => (
+          <button
+            key={command}
+            onClick={() => setInputMessage(command)}
+            style={{
+              ...styles.quickButton,
+              ...(isLoading ? styles.quickButtonDisabled : {}),
+            }}
+            disabled={isLoading}
+          >
+            {text}
+          </button>
+        ))}
       </div>
     </div>
   );

@@ -47,6 +47,10 @@ function App() {
             path="/employers/:id/adjustments"
             element={<EmployerAdjustments />}
           />
+          <Route
+            path="/employers/adjustments"
+            element={<EmployerAdjustments />}
+          />
           <Route path="/attendance" element={<Attendance />} />
           <Route
             path="/employers/:id/salary-summary"

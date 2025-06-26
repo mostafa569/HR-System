@@ -64,7 +64,6 @@ const CreateEmployer = () => {
   const validate = () => {
     const newErrors = {};
 
-    // Full Name validation
     if (!formData.full_name) {
       newErrors.full_name = "Full name is required";
     } else if (!/^[a-zA-Z\s]+$/.test(formData.full_name)) {
@@ -72,17 +71,14 @@ const CreateEmployer = () => {
         "Name must contain only English letters without numbers or special characters";
     }
 
-    // Gender validation
     if (!formData.gender) {
       newErrors.gender = "Gender is required";
     }
 
-    // Nationality validation
     if (!formData.nationality) {
       newErrors.nationality = "Nationality is required";
     }
 
-    // Date of Birth validation
     if (!formData.dob) {
       newErrors.dob = "Date of birth is required";
     } else {
@@ -93,7 +89,6 @@ const CreateEmployer = () => {
       }
     }
 
-    // National ID validation
     if (!formData.national_id) {
       newErrors.national_id = "National ID is required";
     } else if (!/^[0-9]+$/.test(formData.national_id)) {
@@ -105,7 +100,6 @@ const CreateEmployer = () => {
       newErrors.national_id = "National ID must be between 5 and 20 digits";
     }
 
-    // Phone validation
     if (!formData.phone) {
       newErrors.phone = "Phone number is required";
     } else if (!/^01[0125][0-9]{8}$/.test(formData.phone)) {
@@ -113,7 +107,6 @@ const CreateEmployer = () => {
         "Invalid phone number. Must start with 01 followed by 0, 1, 2, or 5 and then 8 digits";
     }
 
-    // Other validations
     if (!formData.address) newErrors.address = "Address is required";
     if (!formData.department_id)
       newErrors.department_id = "Department is required";
@@ -123,6 +116,16 @@ const CreateEmployer = () => {
     if (!formData.attendance_time)
       newErrors.attendance_time = "Attendance time is required";
     if (!formData.leave_time) newErrors.leave_time = "Leave time is required";
+
+    
+    if (
+      formData.attendance_time &&
+      formData.leave_time &&
+      formData.attendance_time > formData.leave_time
+    ) {
+      newErrors.attendance_time = "Attendance time cannot be after leave time";
+      newErrors.leave_time = "Leave time cannot be before attendance time";
+    }
 
     return newErrors;
   };
@@ -152,14 +155,12 @@ const CreateEmployer = () => {
         const validationErrors = error.response?.data?.errors;
 
         if (validationErrors) {
-          // Handle validation errors from the server
           const formattedErrors = {};
           Object.keys(validationErrors).forEach((key) => {
             formattedErrors[key] = validationErrors[key][0];
           });
           setErrors(formattedErrors);
 
-          // Switch to the appropriate tab based on the first error
           const errorField = Object.keys(validationErrors)[0];
           if (
             ["full_name", "gender", "nationality", "dob"].includes(errorField)
@@ -175,14 +176,12 @@ const CreateEmployer = () => {
             setActiveTab("schedule");
           }
         } else {
-          // Handle other types of errors
           toast.error(errorMessage || "Failed to create employee");
         }
       } finally {
         setIsLoading(false);
       }
     } else {
-      // Handle client-side validation errors
       if (
         validationErrors.full_name ||
         validationErrors.gender ||

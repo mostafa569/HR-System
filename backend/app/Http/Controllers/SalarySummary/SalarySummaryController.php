@@ -22,75 +22,76 @@ class SalarySummaryController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = DB::table('salary_summaries')
+            $query = SalarySummary::with(['employer', 'employer.department'])
+                ->select('salary_summaries.*')
                 ->join('employers', 'salary_summaries.employer_id', '=', 'employers.id')
-                ->join('departments', 'employers.department_id', '=', 'departments.id')
-                ->select(
-                    'salary_summaries.*',
-                    'employers.full_name',
-                    'employers.salary as base_salary',
-                    'departments.name as department_name',
-                    DB::raw('(salary_summaries.total_deductions + (employers.salary / 30 * salary_summaries.absent_days)) as total_all_deductions')
-                );
-
-
-            if ($request->has('search')) {
+                ->join('departments', 'employers.department_id', '=', 'departments.id');
+    
+            // Apply filters
+            if ($request->filled('search')) {
                 $search = $request->search;
                 $query->where(function ($q) use ($search) {
                     $q->where('employers.full_name', 'like', "%{$search}%")
-                        ->orWhere('employers.national_id', 'like', "%{$search}%");
+                      ->orWhere('employers.national_id', 'like', "%{$search}%");
                 });
             }
-
-            if ($request->has('department_id')) {
+    
+            if ($request->filled('department_id')) {
                 $query->where('employers.department_id', $request->department_id);
             }
-
-            if ($request->has('month')) {
+    
+            if ($request->filled('month')) {
                 $query->where('salary_summaries.month', $request->month);
             }
-
-            if ($request->has('year')) {
+    
+            if ($request->filled('year')) {
                 $query->where('salary_summaries.year', $request->year);
             }
-
-
-            $query->orderBy('salary_summaries.year', 'desc')
-                ->orderBy('salary_summaries.month', 'desc');
-
-
-            $summaries = $query->get()->groupBy(function ($item) {
-                return $item->employer_id . '-' . $item->year . '-' . $item->month;
-            })->map(function ($group) {
-                return $group->first();
-            })->values();
-
-
-            $summaries->transform(function ($summary) {
-                $summary->final_salary = max(0, $summary->base_salary + $summary->total_additions - $summary->total_all_deductions);
-                return $summary;
-            });
-
-
-            if ($request->has('sort_by')) {
-                $sortBy = $request->sort_by;
-                $sortDirection = $request->sort_direction ?? 'asc';
-                $summaries = $summaries->sortBy($sortBy, SORT_REGULAR, $sortDirection === 'desc');
+    
+            // Apply sorting
+            $sortBy = $request->get('sort_by', 'year');
+            $sortDirection = $request->get('sort_direction', 'desc');
+            
+            if ($sortBy === 'department_name') {
+                $query->orderBy('departments.name', $sortDirection);
+            } elseif ($sortBy === 'full_name') {
+                $query->orderBy('employers.full_name', $sortDirection);
+            } else {
+                $query->orderBy('salary_summaries.' . $sortBy, $sortDirection);
             }
-
-
-            $page = $request->get('page', 1);
+    
+            // Get paginated results
             $perPage = $request->get('per_page', 10);
-            $summaries = $summaries->forPage($page, $perPage);
+            $summaries = $query->paginate($perPage);
+    
+             
+            $summariesItems = $summaries->items();
+            foreach ($summariesItems as $summary) {
+                $employer = $summary->employer;
+                if ($employer && isset($summary->absent_days)) {
+                    $dailySalary = $employer->salary / 30;
+                    $summary->absent_deduction = round($summary->absent_days * $dailySalary, 2);
+                } else {
+                    $summary->absent_deduction = 0;
+                }
+
+                
+                if ($employer && isset($summary->attendance_days)) {
+                    $dailySalary = $employer->salary / 30;
+                    $summary->final_salary_without_paid_holidays = max(0,round(($summary->attendance_days * $dailySalary)+$summary->total_additions-$summary->total_deductions-$summary->absent_deduction, 2));
+                } else {
+                    $summary->final_salary_without_paid_holidays = 0;
+                }
+            }
 
             return response()->json([
                 'status' => 'success',
                 'data' => [
-                    'summaries' => $summaries->values(),
-                    'total' => $summaries->count(),
-                    'per_page' => $perPage,
-                    'current_page' => $page,
-                    'last_page' => ceil($summaries->count() / $perPage)
+                    'summaries' => $summariesItems,
+                    'total' => $summaries->total(),
+                    'per_page' => $summaries->perPage(),
+                    'current_page' => $summaries->currentPage(),
+                    'last_page' => $summaries->lastPage()
                 ]
             ]);
         } catch (\Exception $e) {
@@ -151,42 +152,54 @@ class SalarySummaryController extends Controller
                 ->leftJoin('departments', 'employers.department_id', '=', 'departments.id')
                 ->where('employers.id', $employerId)
                 ->first();
-
+    
             if (!$employer) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Employer not found'
                 ], 404);
             }
-
+    
             $salarySummaries = DB::table('salary_summaries')
                 ->where('employer_id', $employerId)
                 ->orderBy('year', 'desc')
                 ->orderBy('month', 'desc')
                 ->get();
-
+    
             $uniqueSummaries = $salarySummaries->groupBy(function ($summary) {
                 return $summary->year . '-' . $summary->month;
             })->map(function ($group) {
                 return $group->first();
             })->values();
-
+    
             $uniqueSummaries->transform(function ($summary) use ($employer) {
                 $dailySalary = $employer->salary / 30;
+                
+                // Calculate absent deduction
                 $summary->absent_deduction = round($summary->absent_days * $dailySalary, 2);
-
-
+    
+                // Cast numeric fields to float
                 $summary->total_additions = floatval($summary->total_additions ?? 0);
                 $summary->total_deductions = floatval($summary->total_deductions ?? 0);
                 $summary->additions_hours = floatval($summary->additions_hours ?? 0);
                 $summary->deductions_hours = floatval($summary->deductions_hours ?? 0);
-
+    
+                // Calculate final salary (with paid holidays)
                 $totalDeductions = $summary->total_deductions + $summary->absent_deduction;
                 $summary->final_salary = max(0, $employer->salary + $summary->total_additions - $totalDeductions);
-
+                
+                // Calculate final salary WITHOUT paid holidays
+                $summary->final_salary_without_paid_holidays = max(0,round(($summary->attendance_days * $dailySalary)+$summary->total_additions-$summary->total_deductions-$summary->absent_deduction, 2));
+                
+                // If no attendance days, set both salaries to 0
+                if (isset($summary->attendance_days) && $summary->attendance_days == 0) {
+                    $summary->final_salary = 0;
+                    $summary->final_salary_without_paid_holidays = 0;
+                }
+                
                 return $summary;
             });
-
+    
             return response()->json([
                 'status' => 'success',
                 'data' => [

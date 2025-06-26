@@ -79,13 +79,11 @@ const HolidayEditForm = ({ holiday, onClose, onUpdated, holidays = [] }) => {
   }, [holiday]);
 
   useEffect(() => {
-    
     const sidebar = document.querySelector(".sidebar-wrapper");
     if (sidebar) {
       sidebar.style.display = "none";
     }
 
-     
     return () => {
       if (sidebar) {
         sidebar.style.display = "block";
@@ -126,6 +124,11 @@ const HolidayEditForm = ({ holiday, onClose, onUpdated, holidays = [] }) => {
     setSuccess(null);
     setIsSubmitting(true);
 
+    const holidayData = { ...form };
+    if (isCreateMode) {
+      delete holidayData.id;
+    }
+
     try {
       const token = localStorage.getItem("userToken");
       const url = isCreateMode
@@ -139,7 +142,7 @@ const HolidayEditForm = ({ holiday, onClose, onUpdated, holidays = [] }) => {
           Authorization: `Bearer ${token}`,
           Accept: "application/json",
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify(holidayData),
       });
 
       const data = await response.json();

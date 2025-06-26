@@ -27,7 +27,7 @@ api.interceptors.response.use(
     if (error.response && (error.response.status === 401 || error.response.status === 403)) {
       console.error('Authentication error: Redirecting to login.');
       localStorage.removeItem('userToken');
-      window.location.href = '/login';
+      // window.location.href = '/login';
     }
     return Promise.reject(error);
   }

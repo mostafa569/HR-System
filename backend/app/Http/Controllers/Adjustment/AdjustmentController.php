@@ -200,7 +200,7 @@ class AdjustmentController extends Controller
 
             $adjustment->update($updateData);
 
-            // Calculate salary for the month of the adjustment
+            
             $date = Carbon::parse($request->date ?? $adjustment->date);
             $this->salaryCalculationService->calculateSalary(
                 $adjustment->employer_id,
@@ -230,7 +230,7 @@ class AdjustmentController extends Controller
 
             $adjustment->delete();
 
-            // Recalculate salary after deletion
+            
             $this->salaryCalculationService->calculateSalary(
                 $employerId,
                 $date->year,
