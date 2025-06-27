@@ -6,12 +6,89 @@ import 'react-toastify/dist/ReactToastify.css';
 const authService = {
   apiCall: async (url, options) => {
     try {
-      // Simulate backend response for demo purposes
       if (url === '/chatbot/chat') {
         const { message } = JSON.parse(options.body);
+        const lowerMessage = message.toLowerCase().trim();
+
+        // Simulate responses for specific commands
+        if (lowerMessage.match(/\b(list|all|show)\s*(employees|employers)?\b/)) {
+          return {
+            success: true,
+            response: "👥 First 10 employees:\n" +
+                      "• John Doe - Sales\n" +
+                      "• Jane Smith - IT\n" +
+                      "• Alice Johnson - HR\n" +
+                      "• Bob Wilson - Marketing\n" +
+                      "• Sarah Brown - Finance",
+            timestamp: new Date().toISOString(),
+          };
+        }
+        if (lowerMessage.match(/\b(recent|new|latest)\s*(employees|employers)?\b/)) {
+          return {
+            success: true,
+            response: "📅 Latest 5 employees added:\n" +
+                      "• Bob Wilson - Marketing (Phone: 1234567890)\n" +
+                      "• Sarah Brown - Finance (Phone: 0987654321)\n" +
+                      "• Emily Davis - IT (Phone: 5551234567)\n" +
+                      "• Michael Lee - Sales (Phone: 5559876543)\n" +
+                      "• Laura Adams - HR (Phone: 5554567890)",
+            timestamp: new Date().toISOString(),
+          };
+        }
+        if (lowerMessage.includes('search by phone')) {
+          return {
+            success: true,
+            response: "👤 Employee Details for John Doe:\n" +
+                      "• Phone: 1234567890\n" +
+                      "• Department: Sales\n" +
+                      "• Nationality: US\n" +
+                      "• Contract Date: 2023-01-15\n" +
+                      "• Salary: 5,000.00 EGP\n" +
+                      "• Gender: Male\n" +
+                      "• Address: 123 Main St",
+            timestamp: new Date().toISOString(),
+          };
+        }
+        if (lowerMessage.match(/\b(in|employees in|staff in|who is in|in the)\s+([\w\s]+)/)) {
+          const deptMatch = lowerMessage.match(/\b(in|employees in|staff in|who is in|in the)\s+([\w\s]+)/i);
+          const deptName = deptMatch ? deptMatch[2].trim() : 'Unknown';
+          return {
+            success: true,
+            response: `👥 Employees in ${deptName}:\n` +
+                      "• John Doe\n" +
+                      "• Jane Smith\n" +
+                      "• Alice Johnson",
+            timestamp: new Date().toISOString(),
+          };
+        }
+        if (lowerMessage.includes('help')) {
+          return {
+            success: true,
+            response: "🤖 HR AI Assistant Commands:\n\n" +
+                      "📊 Statistics\n   - 'statistics' or 'stats': Show system overview.\n\n" +
+                      "👥 Employees\n   - 'employee count': Total number of employees.\n" +
+                      "   - 'recent employees': List newest employees.\n" +
+                      "   - 'list employees': Show first 10 employees.\n" +
+                      "   - 'employee [name]': Details for a specific employee.\n" +
+                      "   - 'search by phone [number]': Search by phone number.\n\n" +
+                      "🏢 Departments\n   - 'department info': List all departments and employee counts.\n" +
+                      "   - 'employees in [department name]': List employees in a department.\n\n" +
+                      "🏖️ Holidays\n   - 'upcoming holidays': Show upcoming holidays.\n" +
+                      "   - 'holiday count': Total number of holidays.\n\n" +
+                      "⏰ Attendance\n   - 'today attendance': Today's attendance count.\n" +
+                      "   - 'this month attendance': Monthly attendance count.\n" +
+                      "   - 'attendance for [name] today': Check employee's attendance.\n\n" +
+                      "💰 Salaries\n   - 'total salaries': Total salary amount.\n" +
+                      "   - 'salary for [name]': Specific employee's salary.\n\n" +
+                      "📄 PDF Upload\n   - Upload a CV for analysis via the upload button.",
+            timestamp: new Date().toISOString(),
+          };
+        }
+
+        // Default mock response
         return {
           success: true,
-          response: `Processed: ${message}\n\nTry commands like:\n• statistics\n• employee count\n• department info\n• upcoming holidays\n• total salaries\n• help`,
+          response: `Processed: ${message}\n\nTry commands like:\n• statistics\n• recent employees\n• list employees\n• department info\n• upcoming holidays\n• total salaries\n• help`,
           timestamp: new Date().toISOString(),
         };
       } else if (url === '/chatbot/upload-pdf') {
@@ -20,6 +97,7 @@ const authService = {
           response: '📄 PDF processed successfully.\n\nSample analysis:\n• File Size: 123.45 KB\n• Total Words: 500\n• CV Rating: ⭐ Very Good (85%)',
         };
       }
+
       const response = await fetch(url, {
         ...options,
         headers: {
@@ -98,7 +176,7 @@ const styles = {
   },
   botMessageContent: {
     background: '#e9ecef',
-    color: '333',
+    color: '#333',
   },
   messageContentCode: {
     display: 'block',
@@ -254,7 +332,7 @@ const Chatbot = () => {
         id: 1,
         type: 'bot',
         content:
-          'Hello! I\'m your HR System AI Assistant. I can help with employee info, departments, holidays, attendance, salaries, and CV analysis. Type \'help\' to see all commands or upload a PDF for CV analysis.',
+          'Hello! I\'m your HR System AI Assistant. I can help with employee info, departments, holidays, attendance, salaries, and CV analysis. Try commands like \'recent employees\', \'list employees\', or type \'help\' for all commands.',
         timestamp: new Date(),
       },
     ]);
@@ -281,7 +359,7 @@ const Chatbot = () => {
     try {
       const response = await authService.apiCall('/chatbot/chat', {
         method: 'POST',
-        body: JSON.stringify({ message: inputMessage }),
+        body: JSON.stringify({ message: inputMessage.trim() }), // Trim input
       });
 
       if (response.success) {
@@ -289,7 +367,7 @@ const Chatbot = () => {
           id: Date.now() + 1,
           type: 'bot',
           content: response.response,
-          timestamp: new Date(),
+          timestamp: new Date(response.timestamp),
         };
         setMessages((prev) => [...prev, botMessage]);
       } else {
@@ -438,7 +516,7 @@ const Chatbot = () => {
           value={inputMessage}
           onChange={(e) => setInputMessage(e.target.value)}
           onKeyPress={handleKeyPress}
-          placeholder="Type your message here..."
+          placeholder="Type your message here (e.g., 'recent employees', 'list employees')..."
           disabled={isLoading}
           style={styles.messageInput}
           rows={1}
@@ -480,8 +558,10 @@ const Chatbot = () => {
       <div style={styles.quickActions}>
         {[
           { text: '📊 Statistics', command: 'statistics' },
-          { text: '👥 Employees', command: 'employee count' },
+          { text: '👥 Recent Employees', command: 'recent employees' },
+          { text: '👥 List Employees', command: 'list employees' },
           { text: '🏢 Departments', command: 'department info' },
+          { text: '🏖️ Holidays', command: 'upcoming holidays' },
           { text: '❓ Help', command: 'help' },
         ].map(({ text, command }) => (
           <button

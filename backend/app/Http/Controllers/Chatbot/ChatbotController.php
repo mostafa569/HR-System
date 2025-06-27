@@ -28,8 +28,9 @@ class ChatbotController extends Controller
                 ], 400);
             }
 
-            // Sanitize input to prevent XSS or SQL injection
+            // Sanitize input
             $message = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
+            \Log::info('Chatbot received message: ' . $message); // Log input for debugging
             $response = $this->processMessage($message);
 
             return response()->json([
@@ -329,9 +330,10 @@ class ChatbotController extends Controller
 
     private function processMessage($message)
     {
-        $message = strtolower(trim($message));
+        $message = strtolower(trim(preg_replace('/\s+/', ' ', $message))); // Normalize spaces
+        \Log::info('Processing message: ' . $message); // Log normalized message
 
-        if (preg_match('/total\\s+salar(y|ies)|salary\\s+total|sum\\s+salar(y|ies)|overall\\s+salar(y|ies)/i', $message)) {
+        if (preg_match('/total\s+salar(y|ies)|salary\s+total|sum\s+salar(y|ies)|overall\s+salar(y|ies)/i', $message)) {
             $totalSalaries = SalarySummary::sum('final_salary');
             return "💰 Total salaries: " . number_format($totalSalaries, 2) . " EGP";
         }
@@ -339,7 +341,7 @@ class ChatbotController extends Controller
         // Define command patterns
         $commands = [
             'stats' => ['statistics', 'stats', 'overview', 'summary'],
-            'employee' => ['employee', 'employer', 'staff', 'worker'],
+            'employee' => ['employee', 'employer', 'staff', 'worker', 'recent', 'list'], // Include recent and list
             'department' => ['department', 'dept', 'division'],
             'holiday' => ['holiday', 'vacation', 'leave'],
             'attendance' => ['attendance', 'present', 'absent', 'check-in'],
@@ -374,7 +376,11 @@ class ChatbotController extends Controller
         return "Sorry, I didn't understand your request. Here's what I can help with:\n" .
                "• 'statistics' for system stats\n" .
                "• 'employee [name]' for employee details\n" .
+               "• 'recent employees' for latest additions\n" .
+               "• 'list employees' for the first 10 employees\n" .
+            //    "• 'search by phone [number]' to search by phone\n" .
                "• 'department info' for department details\n" .
+            //    "• 'employees in [department]' for department employees\n" .
                "• 'upcoming holidays' for holiday info\n" .
                "• 'attendance for [name]' for attendance records\n" .
                "• 'total salaries' for salary info\n" .
@@ -385,7 +391,8 @@ class ChatbotController extends Controller
     private function matchesCommand($message, $keywords)
     {
         foreach ($keywords as $keyword) {
-            if (preg_match("/\b" . preg_quote($keyword, '/') . "\b/i", $message)) {
+            if (str_contains($message, $keyword)) { // Simpler matching
+                \Log::info("Matched command keyword: {$keyword}"); // Log matched keyword
                 return true;
             }
         }
@@ -408,7 +415,8 @@ class ChatbotController extends Controller
 
     private function getEmployerInfo($message)
     {
-        if (preg_match('/\b(count|total|how many)\b/i', $message)) {
+        // Handle employee count
+        if (preg_match('/\b(count|total|how many)\s*(employees|employers)?\b/i', $message)) {
             $count = Employer::count();
             $activeCount = Employer::whereNotNull('contract_date')->count();
             return "📊 Employee Statistics:\n" .
@@ -416,40 +424,53 @@ class ChatbotController extends Controller
                    "• Active Employees: {$activeCount}";
         }
 
-        if (preg_match('/\b(recent|new|latest)\b/i', $message)) {
+        // Handle recent employees
+        if (preg_match('/\b(recent|new|latest)\s*(employees|employers)?\b/i', $message)) {
+            \Log::info('Processing recent employees command');
             $recent = Employer::with('department')->latest()->take(5)->get();
+            if ($recent->isEmpty()) {
+                return "No recent employees found.";
+            }
             $response = "📅 Latest 5 employees added:\n";
             foreach ($recent as $employer) {
                 $departmentName = $employer->department ? $employer->department->name : 'No Department';
                 $response .= "• {$employer->full_name} - {$departmentName} (Phone: {$employer->phone})\n";
             }
-            return $response ?: "No recent employees found.";
+            return $response;
         }
 
-        if (preg_match('/\b(list|all employees|show all)\b/i', $message)) {
+        // Handle list employees
+        if (preg_match('/\b(list|all|show)\s*(employees|employers)?\b/i', $message)) {
+            \Log::info('Processing list employees command');
             $employers = Employer::with('department')->take(10)->get();
+            if ($employers->isEmpty()) {
+                return "No employees found.";
+            }
             $response = "👥 First 10 employees:\n";
             foreach ($employers as $employer) {
                 $departmentName = $employer->department ? $employer->department->name : 'No Department';
                 $response .= "• {$employer->full_name} - {$departmentName}\n";
             }
-            return $response ?: "No employees found.";
+            return $response;
         }
 
-        if (preg_match('/(?:employee|employer|staff|details for|info for|show me|find|search for)\s+([a-zA-Z0-9\s]+)/i', $message, $matches)) {
+        // Handle search by name or phone
+        if (preg_match('/(?:employee|employer|staff|details for|info for|show me|find|search for|search by phone)\s+([\w\s\-\+\(\)]+)/i', $message, $matches)) {
             $searchTerm = trim($matches[1]);
+            \Log::info("Searching for employee with term: {$searchTerm}");
 
             // Avoid misinterpreting command keywords as names
-            $commandWords = ['count', 'total', 'recent', 'new', 'latest', 'list', 'all', 'show'];
+            $commandWords = ['count', 'total', 'recent', 'new', 'latest', 'list', 'all', 'show', 'employees', 'employers'];
             if (in_array(strtolower($searchTerm), $commandWords)) {
                 return $this->getEmployerHelp();
             }
 
             // Search by name or phone
-            $employer = Employer::where('full_name', 'LIKE', "%{$searchTerm}%")
+            $query = Employer::where('full_name', 'LIKE', "%{$searchTerm}%")
                 ->orWhere('phone', 'LIKE', "%{$searchTerm}%")
-                ->with('department')
-                ->first();
+                ->with('department');
+
+            $employer = $query->first();
 
             if ($employer) {
                 $departmentName = $employer->department ? $employer->department->name : 'N/A';
@@ -457,19 +478,15 @@ class ChatbotController extends Controller
                 return "👤 Employee Details for {$employer->full_name}:\n" .
                        "• Phone: {$employer->phone}\n" .
                        "• Department: {$departmentName}\n" .
-                       "• Nationality: " . ($employer->nationality ? $employer->nationality : 'N/A') . "\n" .
-                       "• Contract Date: " . ($employer->contract_date ? $employer->contract_date : 'N/A') . "\n" .
+                       "• Nationality: " . ($employer->nationality ?: 'N/A') . "\n" .
+                       "• Contract Date: " . ($employer->contract_date ?: 'N/A') . "\n" .
                        "• Salary: {$salary}\n" .
-                       "• Gender: " . ($employer->gender ? $employer->gender : 'N/A') . "\n" .
-                       "• Address: " . ($employer->address ? $employer->address : 'N/A');
+                       "• Gender: " . ($employer->gender ?: 'N/A') . "\n" .
+                       "• Address: " . ($employer->address ?: 'N/A');
             }
 
             // Suggest similar employees
-            $similarEmployers = Employer::where('full_name', 'LIKE', "%{$searchTerm}%")
-                ->orWhere('phone', 'LIKE', "%{$searchTerm}%")
-                ->take(3)
-                ->get(['full_name', 'phone']);
-
+            $similarEmployers = $query->take(3)->get(['full_name', 'phone']);
             if ($similarEmployers->count() > 0) {
                 $response = "Sorry, I couldn't find an employee matching '{$searchTerm}'.\n\nDid you mean one of these?\n";
                 foreach ($similarEmployers as $emp) {
@@ -481,7 +498,8 @@ class ChatbotController extends Controller
             return "Sorry, I couldn't find any employee matching '{$searchTerm}'.\n\nTry:\n" .
                    "• 'employee count' for total employees\n" .
                    "• 'recent employees' for latest additions\n" .
-                   "• Check the spelling or try searching by phone number";
+                   "• 'list employees' for the first 10 employees\n" .
+                   "• Check the spelling or try searching by phone number (e.g., 'search by phone 1234567890')";
         }
 
         return $this->getEmployerHelp();
@@ -493,13 +511,14 @@ class ChatbotController extends Controller
                "• 'employee count' for total employees\n" .
                "• 'recent employees' for latest additions\n" .
                "• 'list employees' for the first 10 employees\n" .
-               "• 'employee [name]' for specific employee details\n" .
-               "• 'search for [phone]' to search by phone number";
+               "• 'employee [name]' for specific employee details\n" ;
+            //    "• 'search by phone [number]' to search by phone number";
     }
 
     private function getDepartmentInfo($message)
     {
-        if (preg_match('/\b(in|employees in|staff in|who is in|in the)\s+([a-zA-Z\s]+)\s*(?:department)?/i', $message, $matches)) {
+        // Handle employees in department
+        if (preg_match('/\b(in|employees in|staff in|who is in|in the)\s+([\w\s]+)/i', $message, $matches)) {
             $deptName = trim($matches[2]);
             $department = Department::where('name', 'LIKE', "%{$deptName}%")->with('employers')->first();
 
@@ -514,31 +533,39 @@ class ChatbotController extends Controller
                 }
                 return $response;
             }
-            return "Sorry, I couldn't find a department named '{$deptName}'.";
+            return "Sorry, I couldn't find a department named '{$deptName}'. Try checking the spelling or use 'department info' for a list of departments.";
         }
 
+        // Handle department count
         if (preg_match('/\b(count|total|how many)\b/i', $message)) {
             $count = Department::count();
             return "Total number of departments: {$count}";
         }
 
+        // List all departments
         $departments = Department::withCount('employers')->get();
+        if ($departments->isEmpty()) {
+            return "No departments found.";
+        }
         $response = "🏢 Departments and employee count:\n";
         foreach ($departments as $dept) {
             $response .= "• {$dept->name}: {$dept->employers_count} employees\n";
         }
-        return $response ?: "No departments found.";
+        return $response;
     }
 
     private function getHolidayInfo($message)
     {
         if (preg_match('/\b(upcoming|next|future)\b/i', $message)) {
             $upcoming = Holiday::where('date', '>=', now())->orderBy('date')->take(5)->get();
+            if ($upcoming->isEmpty()) {
+                return "No upcoming holidays found.";
+            }
             $response = "🏖️ Upcoming holidays:\n";
             foreach ($upcoming as $holiday) {
                 $response .= "• {$holiday->name} - {$holiday->date->format('Y-m-d')}\n";
             }
-            return $response ?: "No upcoming holidays found.";
+            return $response;
         }
 
         if (preg_match('/\b(count|total|how many)\b/i', $message)) {
@@ -547,6 +574,9 @@ class ChatbotController extends Controller
         }
 
         $holidays = Holiday::orderBy('date', 'desc')->take(5)->get();
+        if ($holidays->isEmpty()) {
+            return "No recent holidays found.";
+        }
         $response = "🏖️ Recent holidays:\n";
         foreach ($holidays as $holiday) {
             $response .= "• {$holiday->name} - {$holiday->date->format('Y-m-d')}\n";
@@ -556,7 +586,7 @@ class ChatbotController extends Controller
 
     private function getAttendanceInfo($message)
     {
-        if (preg_match('/(?:attendance for|presence of|did)\s+(.+?)\s+(?:attend|come in|work)/i', $message, $matches)) {
+        if (preg_match('/(?:attendance for|presence of|did)\s+([\w\s]+)/i', $message, $matches)) {
             $name = trim($matches[1]);
             $employer = Employer::where('full_name', 'LIKE', "%{$name}%")->first();
 
@@ -597,7 +627,7 @@ class ChatbotController extends Controller
             return "💰 Total salaries: " . number_format($totalSalaries, 2) . " EGP";
         }
 
-        if (preg_match('/(?:salary for|pay for)\s+(.+)/i', $message, $matches)) {
+        if (preg_match('/(?:salary for|pay for)\s+([\w\s]+)/i', $message, $matches)) {
             $name = trim($matches[1]);
             $employer = Employer::where('full_name', 'LIKE', "%{$name}%")->first();
             if ($employer) {
@@ -622,17 +652,20 @@ class ChatbotController extends Controller
                "   - 'recent employees': List newest employees.\n" .
                "   - 'list employees': Show first 10 employees.\n" .
                "   - 'employee [name]': Details for a specific employee.\n" .
-               "   - 'search for [phone]': Search by phone number.\n\n" .
+            //    "   - 'search by phone [number]': Search by phone number.
+                "\n\n" .
                "🏢 Departments\n" .
                "   - 'department info': List all departments and employee counts.\n" .
-               "   - 'employees in [department name]': List employees in a department.\n\n" .
+            //    "   - 'employees in [department name]': List employees in a department.
+            "\n\n" .
                "🏖️ Holidays\n" .
                "   - 'upcoming holidays': Show upcoming holidays.\n" .
                "   - 'holiday count': Total number of holidays.\n\n" .
                "⏰ Attendance\n" .
                "   - 'today attendance': Today's attendance count.\n" .
                "   - 'this month attendance': Monthly attendance count.\n" .
-               "   - 'attendance for [name] today': Check employee's attendance.\n\n" .
+            //    "   - 'attendance for [name] today': Check employee's attendance.
+               "\n\n" .
                "💰 Salaries\n" .
                "   - 'total salaries': Total salary amount.\n" .
                "   - 'salary for [name]': Specific employee's salary.\n\n" .
