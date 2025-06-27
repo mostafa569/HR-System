@@ -1,0 +1,120 @@
+.loginSection {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  width: 100%;
+  background-color: white;
+}
+.hrlogo{
+  width: 50px;
+}
+.loginSection .sectionLayer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 90%;
+  width: 90%;
+  background-color: rgba(13, 110, 253, 0.1);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.loginSection .imageContainer {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: float 4s ease-in-out infinite;
+}
+
+.loginSection .imageContainer img {
+  width: 80%;
+  max-width: 350px;
+  object-fit: contain;
+}
+
+.loginSection form {
+  flex: 1;
+  padding: 30px;
+  background-color: white;
+  border-radius: 20px;
+  box-shadow: 0 0 10px rgba(13, 110, 253, 0.2);
+  color: #0d6efd;
+  margin: 30px;
+}
+
+.loginSection h1 {
+  font-weight: 600;
+  font-size: 28px;
+  color: rgb(31, 69, 113);
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.loginSection button {
+  background-color: rgb(31, 69, 113);
+  color: #fff;
+  font-weight: 600;
+  font-size: 20px;
+  border: none;
+  width: 100%;
+  border-radius: 10px;
+  padding: 10px;
+  margin-top: 10px;
+}
+.inputGroup {
+  display: flex;
+  align-items: center;
+  border: 1px solid rgba(31, 69, 113, 0.5);
+  border-radius: 8px;
+  padding: 5px 10px;
+  margin-bottom: 20px;
+  background-color: #f9f9f9;
+}
+
+.inputGroup i {
+  color: rgb(31, 69, 113);
+  margin-right: 10px;
+  font-size: 18px;
+}
+
+.inputGroup input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 10px 5px;
+  font-size: 16px;
+  color: rgb(31, 69, 113);
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+  .loginSection .sectionLayer {
+    flex-direction: column;
+  }
+
+  .loginSection .imageContainer {
+    display: none;
+  }
+
+  .loginSection form {
+    width: 100%;
+    border-radius: 0;
+    box-shadow: none;
+   
+  }
+}
