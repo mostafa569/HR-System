@@ -4,16 +4,31 @@ import HolidayEditForm from "./HolidayEditForm";
 const HolidayList = () => {
   const [holidays, setHolidays] = useState([]);
   const [searchName, setSearchName] = useState("");
-  const [searchDate, setSearchDate] = useState("");
+  const [searchMonth, setSearchMonth] = useState("");
   const [editingHoliday, setEditingHoliday] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
 
- 
+  const months = [
+    { value: "", label: "All Months" },
+    { value: "01", label: "January" },
+    { value: "02", label: "February" },
+    { value: "03", label: "March" },
+    { value: "04", label: "April" },
+    { value: "05", label: "May" },
+    { value: "06", label: "June" },
+    { value: "07", label: "July" },
+    { value: "08", label: "August" },
+    { value: "09", label: "September" },
+    { value: "10", label: "October" },
+    { value: "11", label: "November" },
+    { value: "12", label: "December" },
+  ];
+
   const API_URL = "http://127.0.0.1:8000/api";
- 
+
   const fetchHolidays = async () => {
     try {
       setLoading(true);
@@ -56,7 +71,7 @@ const HolidayList = () => {
 
     try {
       const token = localStorage.getItem("userToken");
-      
+
       const response = await fetch(`${API_URL}/holidays/${id}`, {
         method: "DELETE",
         headers: {
@@ -67,37 +82,32 @@ const HolidayList = () => {
       });
 
       if (!response.ok) {
-         if (response.status === 204 || response.status === 200) {
-          
+        if (response.status === 204 || response.status === 200) {
           await fetchHolidays();
           return;
         }
-        
+
         let errorMessage = `Failed to delete holiday (${response.status})`;
         try {
           const errorData = await response.json();
           errorMessage = errorData.message || errorMessage;
         } catch {
-          
+          // No JSON response
         }
         throw new Error(errorMessage);
       }
 
-       
       try {
         const result = await response.json();
         console.log("Delete successful:", result);
       } catch {
-    
+        // No response body
       }
 
-      
       await fetchHolidays();
     } catch (error) {
       console.error("Error deleting holiday:", error);
       setError(error.message || "Failed to delete holiday");
-      
-      
       setTimeout(() => setError(""), 5000);
     }
   };
@@ -106,41 +116,42 @@ const HolidayList = () => {
     setSearchName("");
   };
 
-  const resetDateSearch = () => {
-    setSearchDate("");
+  const resetMonthSearch = () => {
+    setSearchMonth("");
   };
 
-   const filteredHolidays =
-    holidays?.filter((h) => {
-      if (!h) return false;
-       if (!h.name && h.type !== "weekly") return false;
+  const filteredHolidays = holidays?.filter((h) => {
+    if (!h) return false;
+    if (!h.name && h.type !== "weekly") return false;
 
-       const matchesName = searchName
-        ? (h.name || "").toLowerCase().includes(searchName.toLowerCase())
-        : true;
-      const matchesDate = searchDate ? h.date?.includes(searchDate) : true;
+    const matchesName = searchName
+      ? (h.name || "").toLowerCase().includes(searchName.toLowerCase())
+      : true;
+    const matchesMonth = searchMonth
+      ? h.date?.startsWith(`2025-${searchMonth}`)
+      : true;
 
-       let matchesFilter = true;
-      switch (activeFilter) {
-        case "official":
-          matchesFilter = h.type === "official";
-          break;
-        case "weekly":
-          matchesFilter = h.type === "weekly";
-          break;
-        case "upcoming":
-          matchesFilter = new Date(h.date) > new Date();
-          break;
-        case "all":
-        default:
-          matchesFilter = true;
-          break;
-      }
+    let matchesFilter = true;
+    switch (activeFilter) {
+      case "official":
+        matchesFilter = h.type === "official";
+        break;
+      case "weekly":
+        matchesFilter = h.type === "weekly";
+        break;
+      case "upcoming":
+        matchesFilter = new Date(h.date) > new Date();
+        break;
+      case "all":
+      default:
+        matchesFilter = true;
+        break;
+    }
 
-      return matchesName && matchesDate && matchesFilter;
-    }) || [];
+    return matchesName && matchesMonth && matchesFilter;
+  }) || [];
 
-   const handleFilterClick = (filterType) => {
+  const handleFilterClick = (filterType) => {
     if (activeFilter === filterType) {
       setActiveFilter("all");
     } else {
@@ -148,7 +159,7 @@ const HolidayList = () => {
     }
   };
 
-   const totalHolidays = holidays?.length || 0;
+  const totalHolidays = holidays?.length || 0;
   const officialHolidays =
     holidays?.filter((h) => h?.type === "official").length || 0;
   const weeklyHolidays =
@@ -339,6 +350,9 @@ const HolidayList = () => {
           font-size: 1rem;
           transition: all 0.3s ease;
           background: #f8f9fa;
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          appearance: none;
         }
 
         .search-input:focus {
@@ -346,6 +360,13 @@ const HolidayList = () => {
           border-color: #667eea;
           background: white;
           box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-input-container select {
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236c757d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+          background-repeat: no-repeat;
+          background-position: right 1.5rem center;
+          background-size: 1rem;
         }
 
         .search-clear-btn {
@@ -701,17 +722,22 @@ const HolidayList = () => {
                 )}
               </div>
               <div className="search-input-container">
-                <input
-                  type="date"
+                <select
                   className="search-input"
-                  value={searchDate}
-                  onChange={(e) => setSearchDate(e.target.value)}
-                />
-                {searchDate && (
+                  value={searchMonth}
+                  onChange={(e) => setSearchMonth(e.target.value)}
+                >
+                  {months.map((month) => (
+                    <option key={month.value} value={month.value}>
+                      {month.label}
+                    </option>
+                  ))}
+                </select>
+                {searchMonth && (
                   <button
                     className="search-clear-btn"
-                    onClick={resetDateSearch}
-                    title="Clear date filter"
+                    onClick={resetMonthSearch}
+                    title="Clear month filter"
                   >
                     ×
                   </button>
@@ -819,7 +845,5 @@ const HolidayList = () => {
     </>
   );
 };
-
- 
 
 export default HolidayList;
