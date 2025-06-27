@@ -78,7 +78,7 @@ class SalarySummaryController extends Controller
                 
                 if ($employer && isset($summary->attendance_days)) {
                     $dailySalary = $employer->salary / 30;
-                    $summary->final_salary_without_paid_holidays = max(0,round(($summary->attendance_days * $dailySalary)+$summary->total_additions-$summary->total_deductions-$summary->absent_deduction, 2));
+                    $summary->final_salary_without_paid_holidays = max(0,round(($summary->attendance_days * $dailySalary)+$summary->total_additions-$summary->total_deductions, 2));
                 } else {
                     $summary->final_salary_without_paid_holidays = 0;
                 }
@@ -189,7 +189,7 @@ class SalarySummaryController extends Controller
                 $summary->final_salary = max(0, $employer->salary + $summary->total_additions - $totalDeductions);
                 
                 // Calculate final salary WITHOUT paid holidays
-                $summary->final_salary_without_paid_holidays = max(0,round(($summary->attendance_days * $dailySalary)+$summary->total_additions-$summary->total_deductions-$summary->absent_deduction, 2));
+                $summary->final_salary_without_paid_holidays = max(0,round(($summary->attendance_days * $dailySalary)+$summary->total_additions-$summary->total_deductions, 2));
                 
                 // If no attendance days, set both salaries to 0
                 if (isset($summary->attendance_days) && $summary->attendance_days == 0) {

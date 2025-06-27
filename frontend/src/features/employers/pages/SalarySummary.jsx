@@ -148,7 +148,7 @@ const SalarySummary = () => {
         "Deductions",
         "Absent Deduction",
         "Final Salary",
-        "Final Salary Without Paid Holidays",
+        "Salary Without Paid Holidays",
         "Attendance Salary",
       ];
 
@@ -430,7 +430,7 @@ const SalarySummary = () => {
                           </div>
                           <div className="d-flex justify-content-between mt-1">
                             <span className="fw-bold">
-                              Final Salary Without Paid Holidays:
+                              Salary Without Paid Holidays:
                             </span>
                             <span className="fw-bold text-warning fs-6">
                               {paginatedSummaries[0]?.final_salary_without_paid_holidays?.toLocaleString() ||
@@ -534,7 +534,7 @@ const SalarySummary = () => {
                             Final Salary with paid holidays
                           </th>
                           <th className="text-end">
-                            Final Salary Without Paid Holidays
+                            Salary Without Paid Holidays
                           </th>
                           <th className="text-end">Attendance Salary</th>
                         </tr>

@@ -276,7 +276,7 @@ const AllSalarySummaries = () => {
       "Total Additions",
       " Deductions",
       "Final Salary with paid holidays",
-      "Final Salary Without Paid Holidays",
+      " Salary Without Paid Holidays",
       "Attendance Salary",
     ];
 
@@ -632,7 +632,7 @@ const AllSalarySummaries = () => {
                           <th className="text-end"> Deductions</th>
                           <th className="text-end pe-4">Final Salary with paid holidays</th>
                           <th className="text-end">
-                            Final Salary Without Paid Holidays
+                             Salary Without Paid Holidays
                           </th>
                           <th className="text-end">Attendance Salary</th>
                         </tr>
