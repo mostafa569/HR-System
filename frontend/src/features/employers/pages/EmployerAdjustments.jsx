@@ -94,11 +94,11 @@ const EmployerAdjustments = () => {
     //     ? parseInt(form.value)
     //     : parseFloat(form.value);
     const parsedValue = parseFloat(form.value);
-   if (isNaN(parsedValue) || parsedValue <= 0) {
-  setError("Value must be a positive number.");
-  setLoading(false);
-  return;
-}
+    if (isNaN(parsedValue) || parsedValue <= 0) {
+      setError("Value must be a positive number.");
+      setLoading(false);
+      return;
+    }
 
     if (form.reason && form.reason.length > 255) {
       setError("Reason cannot exceed 255 characters.");
@@ -127,7 +127,7 @@ const EmployerAdjustments = () => {
       setIsEditing(false);
       setCurrentAdjustmentId(null);
     } catch (err) {
-      // Handle backend validation errors
+    
       if (err.response && err.response.data && err.response.data.errors) {
         const errors = err.response.data.errors;
         if (errors.reason) {
@@ -194,11 +194,11 @@ const EmployerAdjustments = () => {
     //     ? parseInt(form.value)
     //     : parseFloat(form.value);
     const parsedValue = parseFloat(form.value);
-   if (isNaN(parsedValue) || parsedValue <= 0) {
-  setError("Value must be a positive number.");
-  setLoading(false);
-  return;
-}
+    if (isNaN(parsedValue) || parsedValue <= 0) {
+      setError("Value must be a positive number.");
+      setLoading(false);
+      return;
+    }
 
     if (form.reason && form.reason.length > 255) {
       setError("Reason cannot exceed 255 characters.");
@@ -228,7 +228,7 @@ const EmployerAdjustments = () => {
       setIsEditing(false);
       setCurrentAdjustmentId(null);
     } catch (err) {
-      // Handle backend validation errors
+      
       if (err.response && err.response.data && err.response.data.errors) {
         const errors = err.response.data.errors;
         if (errors.reason) {
@@ -399,8 +399,8 @@ const EmployerAdjustments = () => {
                           name="value"
                           value={form.value}
                           onChange={handleFormChange}
-                          min="0.1" // Changed from "1" to allow smaller values
-                          step={form.value_type === "hours" ? "0.1" : "0.01"} // Changed from "1" to "0.1"
+                          min="0.1" 
+                          step={form.value_type === "hours" ? "0.1" : "0.01"}  
                           required
                           className={styles.input}
                         />
@@ -606,8 +606,8 @@ const EmployerAdjustments = () => {
                         name="value"
                         value={form.value}
                         onChange={handleFormChange}
-                        min="1"
-                        step={form.value_type === "hours" ? "1" : "0.01"}
+                        min="0.1" 
+                        step={form.value_type === "hours" ? "0.1" : "0.01"} 
                         required
                         className={styles.input}
                       />
