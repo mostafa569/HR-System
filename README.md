@@ -16,6 +16,7 @@ A comprehensive HR Management System built with a modern technology stack, featu
 
 ## 🛠️ Tech Stack
 
+
 ### Backend (Laravel)
 
 - PHP 8.2+ / Laravel 12
