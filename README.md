@@ -33,6 +33,7 @@ A comprehensive HR Management System built with a modern technology stack, featu
 - Bootstrap & React-Bootstrap for UI components
 - Recharts for data visualization
 - `react-toastify` for notifications
+- Fontawesome for icons
 
 ## 📂 Project Structure
 
