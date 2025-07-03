@@ -93,6 +93,7 @@ php artisan serve
 
 **To run the frontend:**
 From the `frontend` directory, run the Vite development server. This will start the React application, usually on `http://localhost:5173`.
+Documentation by team 2 in Open Source track
 
 ```bash
 # From ./frontend
