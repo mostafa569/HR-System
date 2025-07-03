@@ -120,36 +120,37 @@ const HolidayList = () => {
     setSearchMonth("");
   };
 
-  const filteredHolidays = holidays?.filter((h) => {
-    if (!h) return false;
-    if (!h.name && h.type !== "weekly") return false;
+  const filteredHolidays =
+    holidays?.filter((h) => {
+      if (!h) return false;
+      if (!h.name && h.type !== "weekly") return false;
 
-    const matchesName = searchName
-      ? (h.name || "").toLowerCase().includes(searchName.toLowerCase())
-      : true;
-    const matchesMonth = searchMonth
-      ? h.date?.startsWith(`2025-${searchMonth}`)
-      : true;
+      const matchesName = searchName
+        ? (h.name || "").toLowerCase().includes(searchName.toLowerCase())
+        : true;
+      const matchesMonth = searchMonth
+        ? h.date?.startsWith(`2025-${searchMonth}`)
+        : true;
 
-    let matchesFilter = true;
-    switch (activeFilter) {
-      case "official":
-        matchesFilter = h.type === "official";
-        break;
-      case "weekly":
-        matchesFilter = h.type === "weekly";
-        break;
-      case "upcoming":
-        matchesFilter = new Date(h.date) > new Date();
-        break;
-      case "all":
-      default:
-        matchesFilter = true;
-        break;
-    }
+      let matchesFilter = true;
+      switch (activeFilter) {
+        case "official":
+          matchesFilter = h.type === "official";
+          break;
+        case "weekly":
+          matchesFilter = h.type === "weekly";
+          break;
+        case "upcoming":
+          matchesFilter = new Date(h.date) > new Date();
+          break;
+        case "all":
+        default:
+          matchesFilter = true;
+          break;
+      }
 
-    return matchesName && matchesMonth && matchesFilter;
-  }) || [];
+      return matchesName && matchesMonth && matchesFilter;
+    }) || [];
 
   const handleFilterClick = (filterType) => {
     if (activeFilter === filterType) {
@@ -186,6 +187,55 @@ const HolidayList = () => {
     await fetchHolidays();
     handleModalClose();
   };
+
+  // Helper: Get days in month
+  const getDaysInMonth = (year, month) => {
+    return new Date(year, month + 1, 0).getDate();
+  };
+
+  // Helper: Get first day of week (0=Sunday)
+  const getFirstDayOfWeek = (year, month) => {
+    return new Date(year, month, 1).getDay();
+  };
+
+  // Calendar logic
+  const today = new Date();
+  const selectedYear = 2025; // Your data is for 2025
+  const selectedMonth = searchMonth
+    ? parseInt(searchMonth, 10) - 1
+    : today.getMonth();
+  const daysInMonth = getDaysInMonth(selectedYear, selectedMonth);
+  const firstDayOfWeek = getFirstDayOfWeek(selectedYear, selectedMonth);
+
+  // Holidays for the selected month
+  const holidaysInMonth = holidays.filter(
+    (h) => h.date && new Date(h.date).getMonth() === selectedMonth
+  );
+
+  // Map: day number -> holiday object
+  const holidayMap = {};
+  holidaysInMonth.forEach((h) => {
+    const d = new Date(h.date);
+    holidayMap[d.getDate()] = h;
+  });
+
+  // Build calendar grid (array of weeks, each week is array of days)
+  const calendarRows = [];
+  let week = [];
+  for (let i = 0; i < firstDayOfWeek; i++) {
+    week.push(null); // Empty days before 1st
+  }
+  for (let day = 1; day <= daysInMonth; day++) {
+    week.push(day);
+    if (week.length === 7) {
+      calendarRows.push(week);
+      week = [];
+    }
+  }
+  if (week.length > 0) {
+    while (week.length < 7) week.push(null);
+    calendarRows.push(week);
+  }
 
   if (loading) {
     return (
@@ -589,6 +639,57 @@ const HolidayList = () => {
           color: #adb5bd;
         }
 
+        .calendar-section {
+          background: white;
+          border-radius: 15px;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+          margin-bottom: 2rem;
+          padding: 2rem;
+        }
+        .calendar-title {
+          font-size: 1.3rem;
+          font-weight: 600;
+          margin-bottom: 1rem;
+          color: #333;
+        }
+        .calendar-grid {
+          display: grid;
+          grid-template-columns: repeat(7, 1fr);
+          gap: 0.5rem;
+        }
+        .calendar-header {
+          font-weight: 700;
+          color: #667eea;
+          text-align: center;
+          padding: 0.5rem 0;
+          background: #f3f6fd;
+          border-radius: 8px;
+        }
+        .calendar-cell {
+          min-height: 60px;
+          background: #f8f9fa;
+          border-radius: 8px;
+          text-align: center;
+          padding: 0.5rem 0.25rem;
+          position: relative;
+          font-size: 1rem;
+        }
+        .calendar-day-number {
+          font-weight: 600;
+          color: #333;
+        }
+        .holiday-cell {
+          background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+          color: white;
+          box-shadow: 0 2px 8px rgba(240, 147, 251, 0.15);
+        }
+        .calendar-holiday-name {
+          font-size: 0.85rem;
+          margin-top: 0.25rem;
+          font-weight: 500;
+          color: white;
+          word-break: break-word;
+        }
         @media (max-width: 768px) {
           .holiday-dashboard {
             padding: 1rem 0;
@@ -633,6 +734,13 @@ const HolidayList = () => {
             flex-direction: column;
             gap: 1rem;
             align-items: flex-start;
+          }
+
+          .calendar-section {
+            padding: 1rem;
+          }
+          .calendar-grid {
+            font-size: 0.9rem;
           }
         }
       `}</style>
@@ -743,6 +851,48 @@ const HolidayList = () => {
                   </button>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* Calendar Section */}
+          <div className="calendar-section">
+            <div className="calendar-title">
+              {months[selectedMonth + 1]?.label ||
+                months[today.getMonth() + 1].label}{" "}
+              2025
+            </div>
+            <div className="calendar-grid">
+              <div className="calendar-header">Sun</div>
+              <div className="calendar-header">Mon</div>
+              <div className="calendar-header">Tue</div>
+              <div className="calendar-header">Wed</div>
+              <div className="calendar-header">Thu</div>
+              <div className="calendar-header">Fri</div>
+              <div className="calendar-header">Sat</div>
+              {calendarRows.map((week, i) =>
+                week.map((day, j) => {
+                  const holiday = day ? holidayMap[day] : null;
+                  return (
+                    <div
+                      key={`day-${i}-${j}`}
+                      className={`calendar-cell${
+                        holiday ? " holiday-cell" : ""
+                      }`}
+                    >
+                      {day && (
+                        <>
+                          <div className="calendar-day-number">{day}</div>
+                          {holiday && (
+                            <div className="calendar-holiday-name">
+                              {holiday.name}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
 
