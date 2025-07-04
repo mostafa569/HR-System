@@ -103,3 +103,12 @@ npm run dev
 ```
 
 Now, you can open your browser and navigate to the frontend URL to use the application. The React app is configured to communicate with the backend API running on port 8000.
+
+
+## 📄 License
+
+This project is open-source under the MIT License.
+
+## 🤝 Contribution
+
+Contributions are welcome.. Please fork the repo and submit a pull request. For major changes, open an issue first to discuss what you'd like to change.
